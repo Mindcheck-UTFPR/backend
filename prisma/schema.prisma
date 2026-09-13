@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model avaliacao {
+  id                  Int                 @id @default(autoincrement())
+  usuario_id          Int
+  versao_id           Int
+  criado_em           DateTime            @default(now()) @db.Timestamptz(6)
+  usuario             usuario             @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  questionario_versao questionario_versao @relation(fields: [versao_id], references: [id], onUpdate: NoAction)
+  resposta            resposta[]
+  resultado           resultado?
+
+  @@index([usuario_id])
+  @@index([versao_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model checkin_diario {
+  id               Int         @id @default(autoincrement())
+  usuario_id       Int
+  data             DateTime    @db.Date
+  humor            humor_nivel
+  intensidade      Int         @db.SmallInt
+  sono_horas       Decimal?    @db.Decimal(3, 1)
+  estudou          Boolean?
+  atividade_fisica Boolean?
+  relacoes         Int?        @db.SmallInt
+  eventos          String?     @db.VarChar(280)
+  criado_em        DateTime    @default(now()) @db.Timestamptz(6)
+  editado_em       DateTime?   @db.Timestamptz(6)
+  usuario          usuario     @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([usuario_id, data], map: "checkin_diario_usuario_data_unique")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model faixa_interpretacao {
+  id                  Int                 @id @default(autoincrement())
+  versao_id           Int
+  minimo              Int                 @db.SmallInt
+  maximo              Int                 @db.SmallInt
+  codigo              String              @db.VarChar(40)
+  rotulo              String              @db.VarChar(80)
+  texto_orientativo   String
+  questionario_versao questionario_versao @relation(fields: [versao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resultado           resultado[]
+
+  @@unique([versao_id, codigo], map: "faixa_interpretacao_versao_codigo_unique")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model opcao_pergunta {
+  id             Int        @id @default(autoincrement())
+  pergunta_id    Int
+  texto          String     @db.VarChar(200)
+  valor_numerico Int        @db.SmallInt
+  ordem          Int        @db.SmallInt
+  pergunta       pergunta   @relation(fields: [pergunta_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resposta       resposta[]
+
+  @@unique([pergunta_id, ordem], map: "opcao_pergunta_pergunta_ordem_unique")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pergunta {
+  id                  Int                 @id @default(autoincrement())
+  versao_id           Int
+  texto               String
+  tipo                pergunta_tipo
+  ordem               Int                 @db.SmallInt
+  obrigatoria         Boolean             @default(true)
+  opcao_pergunta      opcao_pergunta[]
+  questionario_versao questionario_versao @relation(fields: [versao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resposta            resposta[]
+
+  @@unique([versao_id, ordem], map: "pergunta_versao_ordem_unique")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model questionario {
+  id                  Int                   @id @default(autoincrement())
+  nome                String                @unique(map: "questionario_nome_unique") @db.VarChar(80)
+  descricao           String?
+  ordem               Int                   @db.SmallInt
+  ativo               Boolean               @default(true)
+  questionario_versao questionario_versao[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model questionario_versao {
+  id                       Int                   @id @default(autoincrement())
+  questionario_id          Int
+  versao                   String                @db.VarChar(20)
+  ativa                    Boolean               @default(false)
+  periodo_reaplicacao_dias Int                   @db.SmallInt
+  criado_em                DateTime              @default(now()) @db.Timestamptz(6)
+  avaliacao                avaliacao[]
+  faixa_interpretacao      faixa_interpretacao[]
+  pergunta                 pergunta[]
+  questionario             questionario          @relation(fields: [questionario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([questionario_id, versao], map: "questionario_versao_questionario_versao_unique")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model resposta {
+  id             Int             @id @default(autoincrement())
+  avaliacao_id   Int
+  pergunta_id    Int
+  opcao_id       Int?
+  texto          String?
+  avaliacao      avaliacao       @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  opcao_pergunta opcao_pergunta? @relation(fields: [opcao_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  pergunta       pergunta        @relation(fields: [pergunta_id], references: [id], onUpdate: NoAction)
+
+  @@unique([avaliacao_id, pergunta_id], map: "resposta_avaliacao_pergunta_unique")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model resultado {
+  id                  Int                 @id @default(autoincrement())
+  avaliacao_id        Int                 @unique(map: "resultado_avaliacao_unique")
+  pontuacao           Int                 @db.SmallInt
+  faixa_id            Int
+  calculado_em        DateTime            @default(now()) @db.Timestamptz(6)
+  avaliacao           avaliacao           @relation(fields: [avaliacao_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  faixa_interpretacao faixa_interpretacao @relation(fields: [faixa_id], references: [id], onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sessao {
+  id                 Int      @id @default(autoincrement())
+  usuario_id         Int
+  refresh_token_hash String   @unique(map: "sessao_refresh_token_hash_unique") @db.VarChar(64)
+  expira_em          DateTime @db.Timestamptz(6)
+  criado_em          DateTime @default(now()) @db.Timestamptz(6)
+  usuario            usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([usuario_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model usuario {
+  id                Int              @id @default(autoincrement())
+  nome              String           @db.VarChar(120)
+  email             String           @unique(map: "usuario_email_unique") @db.VarChar(255)
+  senha_hash        String           @db.VarChar(255)
+  termos_aceitos_em DateTime         @db.Timestamptz(6)
+  termos_versao     String           @db.VarChar(20)
+  criado_em         DateTime         @default(now()) @db.Timestamptz(6)
+  avaliacao         avaliacao[]
+  checkin_diario    checkin_diario[]
+  sessao            sessao[]
+}
+
+enum humor_nivel {
+  muito_baixo
+  baixo
+  neutro
+  bom
+  muito_bom
+}
+
+enum pergunta_tipo {
+  escala
+  polar
+  escolha_unica
+  aberta
+}

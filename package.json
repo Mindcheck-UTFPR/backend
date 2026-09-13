@@ -1,1 +1,43 @@
-{"name":"mindcheck-backend","private":true,"version":"0.1.0","type":"module","engines":{"node":">=22"},"scripts":{"dev":"tsx watch src/server.ts","build":"tsc","start":"node dist/server.js","lint":"eslint .","test":"vitest run"},"dependencies":{"cors":"^2.8.5","dotenv":"^17.2.0","express":"^5.2.0","pg":"^8.16.0","zod":"^4.2.0"},"devDependencies":{"@eslint/js":"^9.39.0","@types/cors":"^2.8.19","@types/express":"^5.0.6","@types/node":"^24.10.0","@types/pg":"^8.15.0","@types/supertest":"^6.0.3","eslint":"^9.39.0","globals":"^16.5.0","supertest":"^7.2.0","tsx":"^4.21.0","typescript":"^5.9.0","typescript-eslint":"^8.50.0","vitest":"^4.0.0"}}
+{
+  "name": "mindcheck-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "postinstall": "prisma generate",
+    "prisma:generate": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.2.0",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.0",
+    "@types/supertest": "^6.0.3",
+    "eslint": "^9.39.0",
+    "globals": "^16.5.0",
+    "prisma": "6.19.3",
+    "supertest": "^7.2.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.50.0",
+    "vitest": "^4.0.0"
+  }
+}

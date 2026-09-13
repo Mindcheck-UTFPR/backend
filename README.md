@@ -17,6 +17,15 @@ pnpm dev
 
 A API estará em `http://localhost:3000`. Use `GET /health` para liveness e `GET /health/ready` para validar o PostgreSQL. Verificações: `pnpm lint`, `pnpm test` e `pnpm build`.
 
+O acesso ao banco usa Prisma (`src/config/prisma.ts`). Crie as tabelas e sincronize o schema:
+
+```bash
+docker compose up -d postgres
+psql "$DATABASE_URL" -f prisma/init.sql
+pnpm prisma:pull
+pnpm prisma:generate
+```
+
 ## Documentação
 
 - [Arquitetura do backend](docs/ARCHITECTURE.md)
