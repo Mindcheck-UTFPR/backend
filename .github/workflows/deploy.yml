@@ -1,0 +1,65 @@
+# Deploy — publica a API na VM (Oracle Cloud + Docker Compose)
+# Segredos (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
+# Não versionar IP, senha ou chave SSH.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Publicar na Oracle Cloud
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+        env:
+          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+
+      - name: Testes automatizados (Vitest)
+        run: pnpm test
+        env:
+          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+
+      - name: Publicar via SSH (Docker Compose)
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git pull --ff-only
+            docker compose up -d --build
+            curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health
+            curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health/ready
