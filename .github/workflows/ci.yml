@@ -1,23 +1,65 @@
-name: Backend CI
+# CI — qualidade e testes (não publica)
+
+name: CI
 
 on:
   pull_request:
   push:
     branches: [main, develop]
 
+env:
+  # Só para o Prisma Client e o teste de /health; não é o banco de produção.
+  DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+
 jobs:
-  verify:
+  testes:
+    name: Testes automatizados
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10
-      - uses: actions/setup-node@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm build
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Executar testes automatizados (Vitest)
+        run: pnpm test
+
+  build:
+    name: Build
+    needs: [testes]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Compilar TypeScript (prisma generate + tsc)
+        run: pnpm build
