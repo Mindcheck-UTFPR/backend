@@ -1,0 +1,24 @@
+# Monitoring — valida o endpoint já publicado (não faz build nem deploy)
+
+name: Monitorar aplicação
+
+on:
+  schedule:
+    # A cada 15 minutos (UTC). Sintaxe cron do GitHub: cinco campos.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Health check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar liveness (/health)
+        run: |
+          curl --fail --silent --show-error --max-time 20 \
+            "${{ vars.HEALTH_URL }}"
+
+      - name: Verificar readiness (/health/ready)
+        run: |
+          curl --fail --silent --show-error --max-time 20 \
+            "${{ vars.READY_URL }}"
