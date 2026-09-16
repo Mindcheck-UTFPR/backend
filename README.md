@@ -17,7 +17,25 @@ pnpm dev
 
 A API estará em `http://localhost:3000`. Use `GET /health` para liveness e `GET /health/ready` para validar o PostgreSQL. Verificações: `pnpm lint`, `pnpm test` e `pnpm build`.
 
-O acesso ao banco usa Prisma (`src/config/prisma.ts`). Crie as tabelas e sincronize o schema:
+## Imagem Docker (v0.1.0)
+
+A API vira o container `mindcheck-backend:0.1.0`. O hostname `postgres` no `DATABASE_URL` é o serviço do Compose, não `localhost`.
+
+```bash
+docker compose build api
+docker compose up -d
+curl http://localhost:3000/health
+```
+
+Só a imagem, sem Compose:
+
+```bash
+docker build -t mindcheck-backend:0.1.0 .
+```
+
+Volume novo do Postgres aplica `prisma/init.sql` na primeira subida. Volume antigo não reexecuta esse SQL.
+
+## Prisma (sem Docker da API)
 
 ```bash
 docker compose up -d postgres
@@ -30,5 +48,6 @@ pnpm prisma:generate
 
 - [Arquitetura do backend](docs/ARCHITECTURE.md)
 - [Hospedagem na Oracle Cloud](docs/ORACLE-CLOUD.md)
+- [Pipelines (CI, deploy, monitoring)](docs/PIPELINES.md)
 
 Nenhuma credencial, IP privado, token ou chave SSH deve ser versionado; altere valores apenas no `.env` local ou no gerenciador de segredos do ambiente.

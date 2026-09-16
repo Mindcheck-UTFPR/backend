@@ -22,6 +22,8 @@ Este guia registra a proposta inicial. Os comandos finais devem ser testados pel
 7. Configurar backup e executar pelo menos um teste de restauração.
 8. Registrar deploy e rollback em um checklist curto.
 
+A publicação reproduzível fica em `.github/workflows/deploy.yml`. O monitoramento periódico de `/health` e `/health/ready` fica em `monitoring.yml`. Segredos e URLs vão nas configurações do GitHub, não neste arquivo.
+
 ## Cuidados com custo e segurança
 
 - Criar alerta de orçamento e revisar os limites atuais da conta gratuita.
