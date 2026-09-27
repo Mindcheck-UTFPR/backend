@@ -1,0 +1,25 @@
+---
+description: Ponteiro para o treinamento da IA no repositório .github da organização
+alwaysApply: true
+---
+
+# Treinamento vive no repositório `.github`
+
+Este repositório de código **não** guarda o processo. A fonte de treinamento da IA é o clone irmão:
+
+`../.github/` → [Mindcheck-UTFPR/.github](https://github.com/Mindcheck-UTFPR/.github)
+
+Antes de implementar, leia (nessa ordem):
+
+1. `../.github/docs/AI-CURSOR.md`
+2. `../.github/docs/DEVELOPMENT.md`
+3. `../.github/docs/PRODUCT.md`
+4. `../.github/docs/CONVENTIONS.md`
+5. `../.github/docs/GOVERNANCE.md`
+6. `../.github/docs/ARCHITECTURE.md`
+
+Regras persistentes canônicas: `../.github/.cursor/rules/`.
+
+Se o workspace do Cursor incluir a pasta `.github` (arquivo `mindcheck.code-workspace`), use esses arquivos direto, sem copiar para frontend/backend.
+
+Não duplique processo aqui. Se o documento da organização e o código divergirem, vale a organização.

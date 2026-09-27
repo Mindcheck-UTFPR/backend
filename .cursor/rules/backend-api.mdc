@@ -1,0 +1,21 @@
+---
+description: Convenções da API Express + Prisma
+globs: "**/*.{ts,js,prisma}"
+alwaysApply: false
+---
+
+# Backend Mindcheck
+
+A API concentra autenticação, humor, questionários, pontuação e dashboard. O frontend só envia dados e apresenta o resultado.
+
+```text
+src/modules/{identity,mood,questionnaires,assessments,scoring,dashboard}
+```
+
+Em cada módulo: rota → validação Zod → caso de uso → Prisma.
+
+- Pontuação determinística na versão publicada do questionário; testar com exemplos.
+- Usuário acessa somente os próprios registros.
+- Logs sem humor, respostas, senha ou token.
+- `/health` = processo; `/health/ready` = PostgreSQL.
+- PostgreSQL só na rede interna do Compose. Nenhum segredo no repositório.
