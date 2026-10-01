@@ -22,7 +22,7 @@ jobs:
       - name: Configurar pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.34.5
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -50,7 +50,7 @@ jobs:
       - name: Configurar pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.34.5
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
