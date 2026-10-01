@@ -1,8 +1,3 @@
-# Deploy — publica a API na VM (Oracle Cloud + Docker Compose)
-# Segredos (Settings → Secrets and variables → Actions):
-#   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
-# Não versionar IP, senha ou chave SSH.
-
 name: Deploy
 
 on:
@@ -10,15 +5,26 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-backend
   cancel-in-progress: false
 
 jobs:
   publicar:
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     name: Publicar na Oracle Cloud
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+      DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +32,7 @@ jobs:
       - name: Configurar pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.34.5
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -36,30 +42,59 @@ jobs:
 
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
-        env:
-          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
 
-      - name: Testes automatizados (Vitest)
-        run: pnpm test
-        env:
-          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+      - name: Lint, testes e build
+        run: |
+          pnpm lint
+          pnpm test
+          pnpm build
 
-      - name: Build
-        run: pnpm build
+      - name: Preparar conexão SSH com identidade da VM verificada
         env:
-          DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9/_-]+$ && "$DEPLOY_PATH" != / ]]
+          [[ "$PUBLIC_URL" == https://* ]]
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          ssh-keygen -F "$DEPLOY_HOST" -f ~/.ssh/known_hosts > /dev/null
+          cat > ~/.ssh/config <<EOF
+          Host mindcheck
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile ~/.ssh/id_ed25519
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 15
+            ServerAliveInterval 30
+            ServerAliveCountMax 6
+          EOF
+          chmod 600 ~/.ssh/config
 
-      - name: Publicar via SSH (Docker Compose)
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-            git pull --ff-only
-            docker compose up -d --build
-            curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health
-            curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health/ready
+      - name: Publicar a release do commit testado
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz --output=release.tgz "$GITHUB_SHA"
+          scp release.tgz "mindcheck:backend-$GITHUB_SHA.tgz"
+          ssh mindcheck "bash -s -- '$DEPLOY_PATH' '$GITHUB_SHA'" < deploy/publish.sh
+
+      - name: Verificar endpoint público HTTPS
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+        run: |
+          test -n "$PUBLIC_URL"
+          [[ "$PUBLIC_URL" == https://* ]]
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --max-time 20 "$PUBLIC_URL"
+
+      - name: Remover chave temporária do runner
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
