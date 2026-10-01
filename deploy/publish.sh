@@ -13,6 +13,7 @@ if [[ ! -d "$release" ]]; then
   staging=$(mktemp -d "$root/releases/.incoming.XXXXXXXX")
   tar -xzf "$HOME/backend-$sha.tgz" -C "$staging"
   test -s "$staging/compose.production.yml"
+  chmod -R a+rX "$staging"
   mv "$staging" "$release"
 fi
 previous=$(readlink -f "$root/current" || true)
