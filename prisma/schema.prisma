@@ -157,6 +157,7 @@ model usuario {
   nome              String           @db.VarChar(120)
   email             String           @unique(map: "usuario_email_unique") @db.VarChar(255)
   senha_hash        String           @db.VarChar(255)
+  papel             papel_usuario    @default(usuario)
   termos_aceitos_em DateTime         @db.Timestamptz(6)
   termos_versao     String           @db.VarChar(20)
   criado_em         DateTime         @default(now()) @db.Timestamptz(6)
@@ -178,4 +179,9 @@ enum pergunta_tipo {
   polar
   escolha_unica
   aberta
+}
+
+enum papel_usuario {
+  usuario
+  admin
 }
