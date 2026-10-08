@@ -4,26 +4,32 @@
 
 A API Node.js concentra autenticação, autorização, diário de humor, questionários, pontuação, dashboard, histórico e encaminhamentos. O cálculo e as regras de acesso ficam no backend; o frontend apenas envia dados e apresenta resultados.
 
-## Organização sugerida
+## Organização
+
+Camadas MVC. Sem pasta `src/modules`.
 
 ```text
 src/
   app.ts
   server.ts
   config/
-  modules/
-    identity/
-    mood/
-    questionnaires/
-    assessments/
-    scoring/
-    dashboard/
-    referrals/
-    admin/
-  shared/
+  routes/          # rotas.ts agrega os routers
+  controllers/     # uma classe por ação, método handle
+  validators/      # Zod
+  services/
+  middlewares/
+  utils/
+prisma/
+  init.sql         # banco novo
+  patches/         # banco que já existia
+  schema.prisma    # espelho do Postgres
 ```
 
-Dentro de cada módulo, usar uma separação simples: rota, validação Zod, caso de uso e acesso ao PostgreSQL.
+O nome do arquivo é o assunto em português, em camelCase, com o papel no final (`autenticacaoController.ts`). `config/env.ts` só lê o `.env`.
+
+Fluxo: `routes/rotas.ts` → `Controller.handle` → validação → service → Prisma.
+
+Como subir a API e atualizar o banco: [GUIA.md](GUIA.md).
 
 ## Produção
 
@@ -36,3 +42,4 @@ O backend roda em container sem porta pública direta. Nginx recebe HTTPS e enca
 - A pontuação é calculada no backend e testada com exemplos.
 - Logs não incluem respostas, humor, senha ou token.
 - `/health` verifica o processo e `/health/ready` verifica o banco.
+- Neste ciclo o schema não usa Prisma Migrate.
