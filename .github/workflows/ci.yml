@@ -8,8 +8,15 @@ on:
     branches: [main, develop]
 
 env:
-  # Só para o Prisma Client e o teste de /health; não é o banco de produção.
+  # Só para o Prisma Client e os testes; não é o banco nem o segredo de produção.
+  NODE_ENV: test
+  PORT: 3000
+  CORS_ORIGIN: http://localhost:5173
   DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+  JWT_SEGREDO: segredo-de-teste-com-32-caracteres-ok
+  JWT_ACCESS_SEGUNDOS: 900
+  REFRESH_DIAS: 7
+  TERMOS_VERSAO: "1.0"
 
 jobs:
   testes:
