@@ -26,7 +26,7 @@ export class CadastroController {
       }
 
       const oUsuario = await cadastrarUsuario(data)
-      response.status(201).json({ oUsuario })
+      response.status(201).json({ usuario: oUsuario })
     } catch (erro) {
       next(erro)
     }
