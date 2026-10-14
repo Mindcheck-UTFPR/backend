@@ -22,6 +22,14 @@ compose() {
 }
 compose config --quiet
 compose build api
+compose up -d --wait --wait-timeout 120 postgres
+# Patch aditivo compatível com a release anterior. Nunca recriar/apagar o volume.
+umask 077
+mkdir -p "$root/backups"
+backup=$(mktemp "$root/backups/pre-auth-$sha.XXXXXXXX.dump")
+compose exec -T postgres pg_dump -U mindcheck -d mindcheck -Fc > "$backup"
+test -s "$backup"
+compose exec -T postgres psql -U mindcheck -d mindcheck -v ON_ERROR_STOP=1 --single-transaction < "$release/prisma/patches/001-usuario-papel.sql"
 if ! compose up -d --wait --wait-timeout 180; then
   if [[ -n "$previous" && -f "$previous/compose.production.yml" ]]; then
     RELEASE_SHA="$(basename "$previous")" docker compose --env-file "$root/.env" -f "$previous/compose.production.yml" up -d --wait --wait-timeout 180

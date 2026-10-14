@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import type { ZodType } from 'zod'
+import { env } from '../config/env.js'
+import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import { cadastrar as cadastrarUsuario, entrar as entrarUsuario } from '../services/autenticacaoService.js'
 import { entradaInvalidaResponder } from '../utils/erro.js'
 import {
@@ -25,6 +27,7 @@ export class CadastroController {
         return
       }
 
+      if (!env.TERMOS_URL) throw new ErroAplicacao(503, 'TERMOS_INDISPONIVEIS', 'O cadastro aguarda a publicação dos termos de uso e privacidade.')
       const oUsuario = await cadastrarUsuario(data)
       response.status(201).json({ usuario: oUsuario })
     } catch (erro) {
