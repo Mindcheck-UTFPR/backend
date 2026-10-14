@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: mindcheck
       POSTGRES_PASSWORD: mindcheck
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - mindcheck_postgres_data:/var/lib/postgresql/data
       - ./prisma/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile
     image: mindcheck-backend:0.1.0
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
