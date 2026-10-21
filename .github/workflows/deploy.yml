@@ -95,6 +95,7 @@ jobs:
           git archive --format=tar.gz --output=release.tgz "$GITHUB_SHA"
           scp release.tgz "mindcheck:backend-$GITHUB_SHA.tgz"
           ssh mindcheck "bash -s -- '$DEPLOY_PATH' '$GITHUB_SHA'" < deploy/publish.sh
+          ssh mindcheck "test '$DEPLOY_PATH/releases/$GITHUB_SHA' -ef '$DEPLOY_PATH/current'"
 
       - name: Verificar endpoint público HTTPS
         env:

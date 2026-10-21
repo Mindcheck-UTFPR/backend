@@ -27,7 +27,8 @@ compose up -d --wait --wait-timeout 120 postgres
 umask 077
 mkdir -p "$root/backups"
 backup=$(mktemp "$root/backups/pre-auth-$sha.XXXXXXXX.dump")
-compose exec -T postgres pg_dump -U mindcheck -d mindcheck -Fc > "$backup"
+# O script chega por `ssh ... bash -s`: pg_dump nao pode consumir seu stdin.
+compose exec -T postgres pg_dump -U mindcheck -d mindcheck -Fc < /dev/null > "$backup"
 test -s "$backup"
 compose exec -T postgres psql -U mindcheck -d mindcheck -v ON_ERROR_STOP=1 --single-transaction < "$release/prisma/patches/001-usuario-papel.sql"
 if ! compose up -d --wait --wait-timeout 180; then
@@ -39,6 +40,7 @@ if ! compose up -d --wait --wait-timeout 180; then
 fi
 curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health
 curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/health/ready
+curl --fail --silent --show-error --max-time 20 http://127.0.0.1:3000/auth/config
 ln -sfn "$release" "$root/current.next"
 mv -Tf "$root/current.next" "$root/current"
 echo "Backend publicado: $sha"

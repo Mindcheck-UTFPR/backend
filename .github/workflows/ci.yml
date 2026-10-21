@@ -61,6 +61,9 @@ jobs:
       - name: Testar provisionamento privado de JWT
         run: python3 -m unittest discover -s deploy -p test_configurar_jwt.py -v
 
+      - name: Testar deploy recebido por entrada padrao SSH
+        run: bash deploy/test_publish.sh
+
       - name: Inicializar banco isolado dos testes de integração
         env:
           PGPASSWORD: mindcheck
