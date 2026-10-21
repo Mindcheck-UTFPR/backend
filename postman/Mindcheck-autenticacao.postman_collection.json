@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "Mindcheck — autenticação",
+    "description": "Cadastro e login da API local. Importe no Postman em Import → File. A API precisa estar no ar (`pnpm dev`) e o Postgres com a coluna `papel`. Se o cadastro repetir o mesmo e-mail, a resposta é 409.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "email",
+      "value": "ana@utfpr.edu.br"
+    },
+    {
+      "key": "senha",
+      "value": "senha-segura-1"
+    },
+    {
+      "key": "termosVersao",
+      "value": "1.0"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cadastrar",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"termosAceitos\": true,\n  \"termosVersao\": \"{{termosVersao}}\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/cadastro",
+        "description": "Cria a conta com papel usuario. Resposta 201 traz id, nome, email e papel, sem senha e sem token."
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const corpo = pm.response.json();",
+              "  pm.collectionVariables.set('accessToken', corpo.accessToken);",
+              "  pm.collectionVariables.set('refreshToken', corpo.refreshToken);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login",
+        "description": "Devolve accessToken, refreshToken, expiraEm e o usuário. Os tokens ficam salvos nas variáveis da collection."
+      },
+      "response": []
+    }
+  ]
+}

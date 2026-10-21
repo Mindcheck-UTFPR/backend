@@ -2,6 +2,7 @@ import cors from 'cors'
 import express from 'express'
 import { env } from './config/env.js'
 import { prisma } from './config/prisma.js'
+import oRotas from './routes/rotas.js'
 
 export const app = express()
 
@@ -21,3 +22,5 @@ app.get('/health/ready', async (_request, response) => {
     response.status(503).json({ status: 'not-ready', database: 'disconnected' })
   }
 })
+
+app.use(oRotas)
