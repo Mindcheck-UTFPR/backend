@@ -36,6 +36,11 @@ services:
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:?Defina a origem HTTPS do frontend}
       DATABASE_URL: ${DATABASE_URL:?Defina a URL do PostgreSQL com host postgres}
+      JWT_SEGREDO: ${JWT_SEGREDO:?Defina um segredo JWT forte na VM}
+      JWT_ACCESS_SEGUNDOS: ${JWT_ACCESS_SEGUNDOS:-900}
+      REFRESH_DIAS: ${REFRESH_DIAS:-7}
+      TERMOS_VERSAO: ${TERMOS_VERSAO:-1.0}
+      TERMOS_URL: ${TERMOS_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

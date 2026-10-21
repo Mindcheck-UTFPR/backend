@@ -33,3 +33,7 @@ export const loginSchema = z.object({
 
 export type CadastroEntrada = z.infer<typeof cadastroSchema>
 export type LoginEntrada = z.infer<typeof loginSchema>
+
+export const refreshSchema = z.object({
+  refreshToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Sessão inválida.'),
+})

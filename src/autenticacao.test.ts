@@ -13,6 +13,7 @@ process.env.JWT_SEGREDO ??= 'segredo-de-teste-com-32-caracteres-ok'
 process.env.JWT_ACCESS_SEGUNDOS ??= '900'
 process.env.REFRESH_DIAS ??= '7'
 process.env.TERMOS_VERSAO ??= '1.0'
+process.env.TERMOS_URL ??= 'https://example.test/termos-fixture'
 
 vi.mock('./config/prisma.js', () => ({
   prisma: {
@@ -29,6 +30,7 @@ vi.mock('./config/prisma.js', () => ({
 
 const { prisma } = await import('./config/prisma.js')
 const { app } = await import('./app.js')
+const { env } = await import('./config/env.js')
 
 const senhaValida = 'senha-segura-1'
 
@@ -84,6 +86,16 @@ describe('cadastro e login', () => {
     expect(await senhaConfere(senhaValida, gravado.senha_hash)).toBe(true)
     expect(JSON.stringify(response.body)).not.toContain(senhaValida)
     expect(response.body.usuario).not.toHaveProperty('senha_hash')
+  })
+  it('não coleta aceite sem documento de termos publicado', async () => {
+    const anterior = env.TERMOS_URL
+    try {
+      env.TERMOS_URL = null
+      const response = await request(app).post('/auth/cadastro').send(corpoCadastro())
+      expect(response.status).toBe(503)
+      expect(response.body.erro.codigo).toBe('TERMOS_INDISPONIVEIS')
+      expect(prisma.usuario.create).not.toHaveBeenCalled()
+    } finally { env.TERMOS_URL = anterior }
   })
 
   it('recusa e-mail inválido sem ecoar a senha', async () => {
