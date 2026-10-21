@@ -8,14 +8,21 @@ alwaysApply: false
 
 A API concentra autenticação, humor, questionários, pontuação e dashboard. O frontend só envia dados e apresenta o resultado.
 
+Camadas, sem `src/modules`:
+
 ```text
-src/modules/{identity,mood,questionnaires,assessments,scoring,dashboard}
+src/{routes,controllers,validators,services,middlewares,utils}
 ```
 
-Em cada módulo: rota → validação Zod → caso de uso → Prisma.
+`routes/rotas.ts` agrega as rotas. Controller é uma classe com `handle`. Validação Zod no validator. Regra no service, acesso no Prisma.
+
+Nome do arquivo: assunto em português, camelCase, papel no final (`autenticacaoController.ts`). `config/env.ts` só lê o `.env`.
+
+Banco neste ciclo: `prisma/init.sql` para banco novo, `prisma/patches/` para banco já criado. Sem Prisma Migrate. `prisma generate` não altera tabela.
 
 - Pontuação determinística na versão publicada do questionário; testar com exemplos.
 - Usuário acessa somente os próprios registros.
 - Logs sem humor, respostas, senha ou token.
+- Erro HTTP: `{ erro: { codigo, mensagem } }`.
 - `/health` = processo; `/health/ready` = PostgreSQL.
 - PostgreSQL só na rede interna do Compose. Nenhum segredo no repositório.

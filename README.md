@@ -57,17 +57,32 @@ Pastas por camada, nomes em português:
 
 ```text
 src/
-  app.ts                 # Express, CORS, /health e /health/ready
-  server.ts              # listen na PORT
+  app.ts
+  server.ts
   config/
-    env.ts               # Zod: NODE_ENV, PORT, CORS_ORIGIN, DATABASE_URL
+    env.ts               # lê o .env; não define valor padrão
     prisma.ts            # PrismaClient singleton
+  routes/
+    rotas.ts
+  controllers/
+    autenticacaoController.ts
+  validators/
+    autenticacaoValidator.ts
+  services/
+    autenticacaoService.ts
+  middlewares/
+    errosMiddleware.ts
+  utils/
+    erro.ts
+    senha.ts
+    tokens.ts
 prisma/
   schema.prisma          # models geradas pelo db pull
   init.sql               # cria enums e tabelas no Postgres
+  patches/               # SQL para banco que já rodou um init antigo
 ```
 
-Fluxo previsto quando as rotas de negócio existirem:
+Fluxo das rotas de negócio:
 
 ```text
 rota → Controller (HTTP + Zod) → Service (regra) → Prisma → JSON
@@ -75,7 +90,7 @@ rota → Controller (HTTP + Zod) → Service (regra) → Prisma → JSON
 
 Não haverá `PontuacaoController`. A soma do questionário é um service chamado no envio da avaliação.
 
-Hoje a API só expõe health checks. Controllers de usuário, check-in, questionário, avaliação e dashboard ainda não foram implementados.
+Cadastro e login estão em `autenticacaoController`. Check-in, questionário, avaliação e dashboard ainda não foram implementados.
 
 ### Endpoints atuais
 
@@ -83,6 +98,12 @@ Hoje a API só expõe health checks. Controllers de usuário, check-in, question
 | --- | --- | --- |
 | `GET` | `/health` | processo vivo (liveness) |
 | `GET` | `/health/ready` | `SELECT 1` no Postgres via Prisma (readiness) |
+| `POST` | `/auth/cadastro` | cria conta com papel `usuario`; a senha fica só como hash |
+| `POST` | `/auth/login` | confere a senha, grava a sessão e devolve os tokens |
+
+Cadastro responde `201` com `usuario` (`id`, `nome`, `email`, `papel`). Login responde `200` com `accessToken`, `refreshToken`, `expiraEm` e o mesmo recorte do usuário. O refresh no banco é o SHA-256 do token, não o valor cru.
+
+Erros seguem `{ "erro": { "codigo", "mensagem" } }`: `400` `ENTRADA_INVALIDA`, `409` `EMAIL_EM_USO`, `401` `CREDENCIAIS_INVALIDAS`. E-mail desconhecido e senha errada usam a mesma mensagem. O corpo do cadastro não escolhe papel; `admin` no JSON é ignorado.
 
 ## Banco de dados
 
@@ -100,8 +121,8 @@ Fonte da verdade das tabelas: `prisma/init.sql`. O Prisma **espelha** o banco co
 
 | Tabela | Papel |
 | --- | --- |
-| `usuario` | conta, hash de senha, aceite de termos |
-| `sessao` | refresh token; logout apaga a linha |
+| `usuario` | conta, hash de senha, papel (`usuario` ou `admin`), aceite de termos |
+| `sessao` | hash do refresh token; logout apaga a linha |
 | `checkin_diario` | hábito diário |
 | `questionario` | catálogo visível no app (`ativo`, `ordem`) |
 | `questionario_versao` | versão `1.0`, flag `ativa`, prazo de reaplicação |
@@ -112,7 +133,7 @@ Fonte da verdade das tabelas: `prisma/init.sql`. O Prisma **espelha** o banco co
 | `resposta` | `opcao_id` (fechada) **ou** `texto` (aberta) |
 | `resultado` | `pontuacao` + `faixa_id` (1:1 com avaliação) |
 
-Enums: `humor_nivel`, `pergunta_tipo`.
+Enums: `humor_nivel`, `pergunta_tipo`, `papel_usuario`.
 
 Relacionamentos principais: usuário 1:N check-in/avaliação/sessão; questionário 1:N versões; versão 1:N perguntas e faixas; avaliação 1:N respostas e 1:1 resultado.
 
@@ -121,6 +142,7 @@ Relacionamentos principais: usuário 1:N check-in/avaliação/sessão; question�
 | Arquivo | Função |
 | --- | --- |
 | `prisma/init.sql` | `CREATE TYPE` / `CREATE TABLE` |
+| `prisma/patches/` | alteração em banco que já executou um init anterior |
 | `prisma/schema.prisma` | models TypeScript (depois do pull) |
 | `src/config/prisma.ts` | uma instância de `PrismaClient` (evita pool duplicado no `tsx watch`) |
 
@@ -138,9 +160,11 @@ Não commitar `.env`. `DATABASE_URL` no PC usa `localhost`; **dentro** do contai
 - Node.js 22+
 - pnpm 10 (ou `npx pnpm@10.34.5` / `npm run …` se o `pnpm` não estiver no PATH do Windows)
 - Docker Desktop **ou** PostgreSQL 16 local
-- Copiar `.env.example` → `.env` com um `DATABASE_URL` que o Postgres aceite (usuário/senha iguais ao pgAdmin)
+- Copiar `.env.example` → `.env` com um `DATABASE_URL` que o Postgres aceite e um `JWT_SEGREDO` de pelo menos 32 caracteres. O Compose lê esse arquivo e repassa o segredo para a API.
 
 ## Comandos
+
+O passo a passo para o time (subir a API, `.env` e atualização do banco) está em [docs/GUIA.md](docs/GUIA.md).
 
 No Windows, se `pnpm` não for reconhecido:
 
@@ -189,7 +213,7 @@ docker compose logs -f api
 docker compose down
 ```
 
-Volume antigo do Postgres **não** reexecuta `init.sql`. Volume novo sim (`./prisma/init.sql` montado em `docker-entrypoint-initdb.d`).
+Volume antigo do Postgres **não** reexecuta `init.sql`. Volume novo sim (`./prisma/init.sql` montado em `docker-entrypoint-initdb.d`). Banco já criado antes da coluna `papel` precisa de `psql "$DATABASE_URL" -f prisma/patches/001-usuario-papel.sql`.
 
 ### Prisma
 

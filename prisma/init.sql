@@ -16,11 +16,17 @@ CREATE TYPE pergunta_tipo AS ENUM (
   'aberta'
 );
 
+CREATE TYPE papel_usuario AS ENUM (
+  'usuario',
+  'admin'
+);
+
 CREATE TABLE usuario (
   id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nome               VARCHAR(120) NOT NULL,
   email              VARCHAR(255) NOT NULL,
   senha_hash         VARCHAR(255) NOT NULL,
+  papel              papel_usuario NOT NULL DEFAULT 'usuario',
   termos_aceitos_em  TIMESTAMPTZ NOT NULL,
   termos_versao      VARCHAR(20) NOT NULL,
   criado_em          TIMESTAMPTZ NOT NULL DEFAULT NOW(),

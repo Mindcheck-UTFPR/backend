@@ -8,13 +8,35 @@ on:
     branches: [main, develop]
 
 env:
-  # Só para o Prisma Client e o teste de /health; não é o banco de produção.
+  # Só para o Prisma Client e os testes; não é o banco nem o segredo de produção.
+  NODE_ENV: test
+  PORT: 3000
+  CORS_ORIGIN: http://localhost:5173
   DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck
+  JWT_SEGREDO: segredo-de-teste-com-32-caracteres-ok
+  JWT_ACCESS_SEGUNDOS: 900
+  REFRESH_DIAS: 7
+  TERMOS_VERSAO: "1.0"
+  TERMOS_URL: https://example.test/termos-fixture
 
 jobs:
   testes:
     name: Testes automatizados
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mindcheck_test
+          POSTGRES_USER: mindcheck
+          POSTGRES_PASSWORD: mindcheck
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U mindcheck -d mindcheck_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://mindcheck:mindcheck@localhost:5432/mindcheck_test
+      RUN_DB_TESTS: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +57,11 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Inicializar banco isolado dos testes de integração
+        env:
+          PGPASSWORD: mindcheck
+        run: psql -h localhost -U mindcheck -d mindcheck_test -v ON_ERROR_STOP=1 -f prisma/init.sql
 
       - name: Executar testes automatizados (Vitest)
         run: pnpm test

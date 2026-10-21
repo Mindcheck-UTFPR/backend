@@ -5,7 +5,8 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    // Erros de queries podem conter parâmetros pessoais. O middleware registra só categoria genérica.
+    log: [],
   })
 
 if (process.env.NODE_ENV !== 'production') {
