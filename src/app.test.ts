@@ -8,12 +8,13 @@ process.env.JWT_SEGREDO ??= 'segredo-de-teste-com-32-caracteres-ok'
 process.env.JWT_ACCESS_SEGUNDOS ??= '900'
 process.env.REFRESH_DIAS ??= '7'
 process.env.TERMOS_VERSAO ??= '1.0'
-const { app } = await import('./app.js')it('responde em JSON quando a rota não existe', async () => {
+const { app } = await import('./app.js')
+describe('health endpoint', () => { it('reports that the API process is healthy', async () => { const response = await request(app).get('/health'); expect(response.status).toBe(200); expect(response.body).toEqual({ status: 'ok', service: 'mindcheck-backend' }) }) })
+
+it('responde em JSON quando a rota não existe', async () => {
   const response = await request(app).get('/auth/rota-inexistente')
   expect(response.status).toBe(404)
   expect(response.body).toEqual({
     erro: { codigo: 'ROTA_NAO_ENCONTRADA', mensagem: 'Rota não encontrada.' },
   })
 })
-
-describe('health endpoint', () => { it('reports that the API process is healthy', async () => { const response = await request(app).get('/health'); expect(response.status).toBe(200); expect(response.body).toEqual({ status: 'ok', service: 'mindcheck-backend' }) }) })
