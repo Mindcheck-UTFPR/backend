@@ -23,7 +23,7 @@ def configurar(arquivo):
     if encontrados:
         valores = shlex.split(encontrados[0].group(1), comments=True)
         if valores and any(valores):
-            if len(valores) != 1 or len(valores[0]) < 32 or valores[0].lower().startswith(('segredo-de-teste', 'changeme', 'defina')):
+            if len(valores) != 1 or len(valores[0]) < 32 or valores[0].lower().startswith(('segredo-de-teste', 'changeme', 'defina', 'troque-por-um-segredo')):
                 raise ValueError('JWT_SEGREDO existente invalido; rotacao exige decisao explicita')
             return 'preservado'
     segredo = secrets.token_hex(64)
