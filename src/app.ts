@@ -1,7 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import { env } from './config/env.js'
-import { prisma } from './config/prisma.js'
+import { prisma } from './config/prisma.js'import { ErroAplicacao, errosMiddleware } from './middlewares/errosMiddleware.js'
 import oRotas from './routes/rotas.js'
 
 export const app = express()
@@ -21,6 +21,9 @@ app.get('/health/ready', async (_request, response) => {
   } catch {
     response.status(503).json({ status: 'not-ready', database: 'disconnected' })
   }
-})
+})app.use(oRotas)
 
-app.use(oRotas)
+app.use((_request, _response, next) => {
+  next(new ErroAplicacao(404, 'ROTA_NAO_ENCONTRADA', 'Rota não encontrada.'))
+})
+app.use(errosMiddleware)
