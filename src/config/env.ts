@@ -18,7 +18,9 @@ export const env = {
   REFRESH_DIAS: Number(ler('REFRESH_DIAS')),
   TERMOS_VERSAO: ler('TERMOS_VERSAO'),
   TERMOS_URL: process.env.TERMOS_URL || null,
-}if (env.JWT_SEGREDO.length < 32) throw new Error('JWT_SEGREDO deve ter pelo menos 32 caracteres')
+}
+
+if (env.JWT_SEGREDO.length < 32) throw new Error('JWT_SEGREDO deve ter pelo menos 32 caracteres')
 if (env.NODE_ENV === 'production' && /^(segredo-de-teste|changeme|defina|troque-por-um-segredo)/i.test(env.JWT_SEGREDO.trim())) {
   throw new Error('JWT_SEGREDO de exemplo não pode ser usado em produção')
 }
