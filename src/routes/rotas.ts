@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { CadastroController, LoginController } from '../controllers/autenticacaoController.js'
-import { errosMiddleware } from '../middlewares/errosMiddleware.js'
 import { SessaoController } from '../controllers/sessaoController.js'
 import { env } from '../config/env.js'
 
@@ -23,7 +22,5 @@ oRotasAutenticacao.post('/logout', sessaoController.logout)
 
 /** Rotas sem validação de autenticação */
 oRotas.use('/auth', oRotasAutenticacao)
-
-oRotas.use(errosMiddleware)
 
 export default oRotas
