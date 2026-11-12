@@ -11,6 +11,7 @@ Esta tarefa **define** o contrato. Não implementa endpoints (MIND-60 e MIND-62)
 - **Autenticação:** `Authorization: Bearer <accessToken>`. O usuário vem do token. O corpo nunca contém `usuarioId`.
 - **Um check-in por usuário e data:** garantido no banco por `UNIQUE (usuario_id, data)`.
 - **Data (`data`):** dia local do usuário, formato `YYYY-MM-DD`, enviado pelo frontend. Não pode ser futura *(a confirmar: tolerância de 1 dia por causa do fuso)*.
+- **Janela de edição (`podeEditar`):** o check-in pode ser editado apenas até o fim do próprio dia (`data` igual ao dia atual, conforme fluxo definido no Figma). Após virar o dia, `podeEditar` passa a ser `false`.
 - **Timestamps (`criadoEm`, `editadoEm`):** UTC, ISO 8601.
 - **Ownership:** cada usuário lê e edita só os seus check-ins. Check-in inexistente e check-in de outro usuário respondem igual (`404`), para não revelar que o registro existe.
 - **Formato de erro:** `{ "erro": { "codigo": "...", "mensagem": "..." } }`, o mesmo já usado em `/auth`.
@@ -29,12 +30,12 @@ Esta tarefa **define** o contrato. Não implementa endpoints (MIND-60 e MIND-62)
 | `sonoHoras` | `sono_horas` | número de 0 a 24, uma casa decimal, ou `null` | não |
 | `estudou` | `estudou` | `true`, `false` ou `null` | não |
 | `atividadeFisica` | `atividade_fisica` | `true`, `false` ou `null` | não |
-| `relacoes` | `relacoes` | inteiro de 1 a 5, ou `null` | não *(o frontend ainda não envia)* |
+| `relacoes` | `relacoes` | inteiro de 1 a 5, ou `null` | não *(reservado para versões futuras; não coletado na UI atual)* |
 | `observacao` | `eventos` | texto de até 280 caracteres, ou `null` | não *(a confirmar o mapeamento)* |
 
 Campos opcionais não respondidos são `null`. Campos desconhecidos no corpo são rejeitados (`400`).
 
-Campos só de resposta: `podeEditar` (boolean), `criadoEm`, `editadoEm` (`null` se nunca editado).
+Campos só de resposta: `podeEditar` (boolean, `true` apenas no dia atual), `criadoEm`, `editadoEm` (`null` se nunca editado).
 
 ## Operações
 
@@ -121,11 +122,9 @@ Conflito (`409`):
 
 1. **Intensidade:** a coluna é `NOT NULL` e o formulário do frontend não a coleta. O frontend não a deriva do humor. Opções: (1) tornar opcional no banco e no contrato *(recomendado)*; (2) o frontend passa a coletar, com o campo no Figma. Decisão necessária antes da MIND-60.
 2. **`observacao` e `eventos`:** o frontend envia `observacao` (280). O banco tem `eventos` (280). Confirmar que são o mesmo campo.
-3. **`relacoes`:** existe no banco (1 a 5). Confirmar se entra no formulário agora ou depois.
-4. **Janela de edição:** só o dia atual ou dias passados? Define a regra de `podeEditar`.
-5. **Tolerância de data futura** por causa do fuso.
-6. **Caminhos** das rotas e `PUT` x `PATCH`.
-7. **Dependência (middleware de sessão):** as rotas precisam de um middleware que valide o `Bearer` JWT e confirme no banco que a sessão (`sid`) ainda existe, como o `GET /auth/me` já faz (MIND-18). O papel nunca vem do JWT, e um JWT expirado nunca concede acesso. A função `usuarioDaSessao(token)` já faz essa validação e é chamada de dentro do `sessaoController`. O middleware pode reaproveitá-la, e será criado na MIND-60.
+3. **Tolerância de data futura** por causa do fuso.
+4. **Caminhos** das rotas e `PUT` x `PATCH`.
+5. **Dependência (middleware de sessão):** as rotas precisam de um middleware que valide o `Bearer` JWT e confirme no banco que a sessão (`sid`) ainda existe, como o `GET /auth/me` já faz (MIND-18). O papel nunca vem do JWT, e um JWT expirado nunca concede acesso. A função `usuarioDaSessao(token)` já faz essa validação e é chamada de dentro do `sessaoController`. O middleware pode reaproveitá-la, e será criado na MIND-60.
 
 ## Casos de teste para a MIND-60 e a MIND-62
 
@@ -137,5 +136,6 @@ Conflito (`409`):
 - Segundo `POST` na mesma data (`409`, devolvendo o registro existente).
 - `GET` sem registro (`200` com `checkin: null`).
 - `PUT` em data sem registro (`404`).
+- `podeEditar` retorna `true` no dia atual e `false` para check-ins de dias anteriores.
 - Testes de integração com PostgreSQL real (o CI usa o banco `mindcheck_test` criado com o `init.sql`) e dados sintéticos, sem dados reais.
 - Se a intensidade virar opcional, a mudança vai nos três lugares do guia do banco: `prisma/init.sql` (o CI usa esse arquivo), um novo `prisma/patches/002-...sql` e o `prisma/schema.prisma`, seguido de `prisma:generate`.
