@@ -2,16 +2,14 @@ import type { NextFunction, Request, Response } from 'express'
 import { ErroAplicacao } from './errosMiddleware.js'
 import { usuarioDaSessao } from '../services/autenticacaoService.js'
 
-declare global {
-  namespace Express {
-    interface Request {
-      usuario?: Awaited<ReturnType<typeof usuarioDaSessao>>
-    }
-  }
+export type UsuarioAutenticado = Awaited<ReturnType<typeof usuarioDaSessao>>
+
+export interface RequisicaoAutenticada extends Request {
+  usuario?: UsuarioAutenticado
 }
 
 export async function autenticacaoMiddleware(
-  request: Request,
+  request: RequisicaoAutenticada,
   _response: Response,
   next: NextFunction,
 ): Promise<void> {

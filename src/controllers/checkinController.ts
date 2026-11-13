@@ -1,4 +1,5 @@
-import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Response } from 'express'
+import type { RequisicaoAutenticada } from '../middlewares/autenticacaoMiddleware.js'
 import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import {
   criarCheckin,
@@ -13,7 +14,7 @@ import {
 } from '../validators/checkinValidator.js'
 
 export class CheckinController {
-  criar = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  criar = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
     try {
       if (!request.usuario) {
         throw new ErroAplicacao(401, 'SESSAO_INVALIDA', 'Entre para continuar.')
@@ -42,7 +43,7 @@ export class CheckinController {
     }
   }
 
-  editar = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  editar = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
     try {
       if (!request.usuario) {
         throw new ErroAplicacao(401, 'SESSAO_INVALIDA', 'Entre para continuar.')
