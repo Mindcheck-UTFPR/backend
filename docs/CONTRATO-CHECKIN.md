@@ -1,141 +1,194 @@
 # Contrato do check-in diário (MIND-23)
 
-Status: **proposta**. Os itens marcados com *(a confirmar)* dependem de decisão do PO, do Eduardo (frontend) ou do time.
+Status: **acordado** com o frontend.
 
 Relacionados: MIND-24 (história), MIND-60 (gravação e edição), MIND-62 (histórico), PR #13 do frontend (`docs/INTEGRACAO-CHECKIN.md`) e `prisma/init.sql` (tabela `checkin_diario`).
 
-Esta tarefa **define** o contrato. Não implementa endpoints (MIND-60 e MIND-62).
+Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 e MIND-62).
 
 ## Regras gerais
 
-- **Autenticação:** `Authorization: Bearer <accessToken>`. O usuário vem do token. O corpo nunca contém `usuarioId`.
-- **Um check-in por usuário e data:** garantido no banco por `UNIQUE (usuario_id, data)`.
-- **Data (`data`):** dia local do usuário, formato `YYYY-MM-DD`, enviado pelo frontend. Não pode ser futura *(a confirmar: tolerância de 1 dia por causa do fuso)*.
-- **Janela de edição (`podeEditar`):** o check-in pode ser editado apenas até o fim do próprio dia (`data` igual ao dia atual, conforme fluxo definido no Figma). Após virar o dia, `podeEditar` passa a ser `false`.
-- **Timestamps (`criadoEm`, `editadoEm`):** UTC, ISO 8601.
-- **Ownership:** cada usuário lê e edita só os seus check-ins. Check-in inexistente e check-in de outro usuário respondem igual (`404`), para não revelar que o registro existe.
-- **Formato de erro:** `{ "erro": { "codigo": "...", "mensagem": "..." } }`, o mesmo já usado em `/auth`.
-- **Prefixo:** as rotas internas são `/checkins`. O Nginx publica `/api/checkins`, como já acontece com `/auth` (`/api/auth`).
-- **Cache:** todas as respostas de check-in usam `Cache-Control: no-store`, como as respostas de `/auth`, porque são dados sensíveis.
-- **Logs:** não registrar humor, observação nem qualquer campo do check-in.
-- **Sem pontuação nem diagnóstico** no check-in.
+- **Autenticação:** `Authorization: Bearer <accessToken>`. O usuário é identificado exclusivamente pelo token de sessão. O corpo da requisição nunca contém `usuarioId`.
+- **Um check-in por usuário e data:** garantido no banco por constraint `UNIQUE (usuario_id, data)`.
+- **Data e fuso horário (`data`):** formato `YYYY-MM-DD`. O fuso oficial de referência é o Horário de Brasília (`America/Sao_Paulo`), utilizado para determinar a data atual (`hoje`) e a expiração da janela de edição.
+- **Janela de edição (`podeEditar`):** um check-in só pode ser criado ou editado durante o seu próprio dia local (`America/Sao_Paulo`). À meia-noite, a janela fecha e `podeEditar` passa a ser `false`. A API valida e bloqueia edições fora da janela.
+- **Timestamps (`criadoEm`, `editadoEm`):** UTC em formato ISO 8601.
+- **Ownership e privacidade:** cada usuário acessa e altera apenas seus próprios registros. Registros inexistentes e registros de outros usuários retornam `404` para evitar enumeração de dados.
+- **Formato de erro:** padronizado em `{ "erro": { "codigo": "...", "mensagem": "...", "detalhes": [...] } }`, mantendo consistência com a API de `/auth`.
+- **Prefixo:** rotas internas em `/checkins`. Publicadas pelo Nginx sob `/api/checkins`.
+- **Cache:** todas as respostas contêm `Cache-Control: no-store` por tratarem de dados pessoais de saúde mental.
+- **Logs:** é proibido registrar conteúdo de `humor`, `observacao` ou qualquer outro dado pessoal nos logs da aplicação.
 
 ## Campos
 
 | JSON | Coluna | Tipo e regra | Obrigatório |
 |---|---|---|---|
-| `data` | `data` | `YYYY-MM-DD`, não futura | sim no `POST` |
+| `id` | `id` | `string` (UUID), identificador único do registro | apenas resposta |
+| `data` | `data` | `YYYY-MM-DD`, não futura (`America/Sao_Paulo`) | sim no `POST` |
 | `humor` | `humor` | `muito_baixo`, `baixo`, `neutro`, `bom` ou `muito_bom` | sim |
-| `intensidade` | `intensidade` | inteiro de 1 a 5 | *(a confirmar)* |
-| `sonoHoras` | `sono_horas` | número de 0 a 24, uma casa decimal, ou `null` | não |
+| `intensidade` | `intensidade` | inteiro de 1 a 5, ou `null` | não (opcional; migration na MIND-60) |
+| `sonoHoras` | `sono_horas` | número de 0 a 24, até uma casa decimal, ou `null` | não |
 | `estudou` | `estudou` | `true`, `false` ou `null` | não |
 | `atividadeFisica` | `atividade_fisica` | `true`, `false` ou `null` | não |
-| `relacoes` | `relacoes` | inteiro de 1 a 5, ou `null` | não *(reservado para versões futuras; não coletado na UI atual)* |
-| `observacao` | `eventos` | texto de até 280 caracteres, ou `null` | não *(a confirmar o mapeamento)* |
+| `relacoes` | `relacoes` | inteiro de 1 a 5, ou `null` | não (reservado para expansões futuras) |
+| `observacao` | `eventos` | texto de até 280 caracteres, ou `null` | não (mapeado para a coluna `eventos`) |
 
-Campos opcionais não respondidos são `null`. Campos desconhecidos no corpo são rejeitados (`400`).
-
-Campos só de resposta: `podeEditar` (boolean, `true` apenas no dia atual), `criadoEm`, `editadoEm` (`null` se nunca editado).
+- Campos opcionais não informados no `POST` assumem o valor `null`.
+- Campos desconhecidos enviados no corpo são rejeitados (`400 ENTRADA_INVALIDA`).
+- Campos exclusivos de resposta: `id`, `podeEditar` (`boolean`), `criadoEm`, `editadoEm` (`null` enquanto não for editado).
 
 ## Operações
 
-Caminhos *(a confirmar com o Eduardo)*.
-
 | Operação | Caminho | Sucesso | Erros |
 |---|---|---|---|
-| Ler o check-in de uma data (padrão: hoje) | `GET /checkins?data=YYYY-MM-DD` | `200` com `{ "checkin": {...} }` ou `{ "checkin": null }` se não houver registro | `400`, `401` |
+| Consultar por data | `GET /checkins?data=YYYY-MM-DD` | `200` com `{ "checkin": {...} }` ou `{ "checkin": null }` | `400`, `401` |
 | Criar | `POST /checkins` | `201` com `{ "checkin": {...} }` | `400`, `401`, `409` |
-| Editar | `PUT /checkins/:data` | `200` com `{ "checkin": {...} }` | `400`, `401`, `404` |
+| Editar (parcial) | `PATCH /checkins/:data` | `200` com `{ "checkin": {...} }` | `400`, `401`, `403`, `404` |
 
-- A leitura **diferencia ausência de registro** (`200` com `checkin: null`) de **erro** (`4xx` ou `5xx`).
-- No `PUT`, o corpo traz o check-in completo. Opcionais omitidos viram `null` *(a confirmar: `PUT` ou `PATCH`)*.
-- Histórico e listagem ficam na MIND-62.
+### Detalhes das operações
+
+1. **`GET /checkins?data=YYYY-MM-DD`:** Se `data` for omitido na query, assume a data atual em `America/Sao_Paulo`. Retorna `200` com `{ "checkin": null }` caso o usuário ainda não possua registro no dia (diferenciando consulta sem dados de erros HTTP).
+2. **`POST /checkins`:** Cria o registro do dia. Se o usuário já tiver registrado check-in na data, retorna `409 CHECKIN_JA_EXISTE`.
+3. **`PATCH /checkins/:data`:** Realiza atualização parcial do check-in da data informada.
+   - Campos omitidos no JSON mantêm os valores atuais gravados no banco.
+   - Campos passados explicitamente como `null` limpam o valor no banco.
+   - Tentativa de edição após o fim do dia (`America/Sao_Paulo`) retorna `403 CHECKIN_NAO_EDITAVEL`.
 
 ## Erros
 
-| Status | Código | Quando |
+| Status | Código | Quando ocorre |
 |---|---|---|
-| `400` | `ENTRADA_INVALIDA` | campo fora da regra, data inválida ou futura, campo desconhecido. Inclui `detalhes` por campo (gerado por `detalhesDeValidacao`, o mesmo do cadastro) |
-| `401` | `SESSAO_INVALIDA` | token ausente, inválido ou expirado; sessão encerrada. Mensagem: "Entre para continuar." (igual ao `GET /auth/me`) |
-| `404` | `CHECKIN_NAO_ENCONTRADO` | não existe check-in na data, ou pertence a outro usuário |
-| `409` | `CHECKIN_JA_EXISTE` | já existe check-in do usuário na data. A resposta inclui o registro existente |
+| `400` | `ENTRADA_INVALIDA` | Dados fora da regra (formato de data, enum inválido, texto > 280 chars) ou campo desconhecido. `detalhes` contém a lista de erros por campo. |
+| `401` | `SESSAO_INVALIDA` | Token ausente, inválido ou expirado. Mensagem: "Entre para continuar." |
+| `403` | `CHECKIN_NAO_EDITAVEL` | Tentativa de alterar um check-in fora do prazo permitido (após o término do dia de referência). |
+| `404` | `CHECKIN_NAO_ENCONTRADO` | Nenhum registro encontrado para a data informada ou pertence a outro usuário. |
+| `409` | `CHECKIN_JA_EXISTE` | Já existe check-in cadastrado para a data. O payload de erro devolve o objeto do `checkin` existente. |
 
-O `409` vem da violação de unicidade do banco (no Prisma, `P2002`). Ao receber o conflito, o frontend recupera o registro existente antes de permitir a edição.
+## Exemplos de Payload
 
-## Exemplos
+### Criar (`POST /checkins`)
 
-Criar:
-
+**Requisição:**
 ```json
 {
-  "data": "2026-11-11",
+  "data": "2026-11-12",
   "humor": "bom",
   "sonoHoras": 7.5,
   "estudou": true,
-  "atividadeFisica": null,
-  "observacao": "Dia tranquilo"
+  "atividadeFisica": false,
+  "observacao": "Dia produtivo"
 }
 ```
 
-Resposta (`201`):
-
+**Resposta de Sucesso (`201 Created`):**
 ```json
 {
   "checkin": {
-    "data": "2026-11-11",
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "data": "2026-11-12",
     "humor": "bom",
     "intensidade": null,
     "sonoHoras": 7.5,
     "estudou": true,
-    "atividadeFisica": null,
+    "atividadeFisica": false,
     "relacoes": null,
-    "observacao": "Dia tranquilo",
+    "observacao": "Dia produtivo",
     "podeEditar": true,
-    "criadoEm": "2026-11-11T22:10:00Z",
+    "criadoEm": "2026-11-12T21:00:00Z",
     "editadoEm": null
   }
 }
 ```
 
-Erro de validação (`400`):
+### Editar (`PATCH /checkins/2026-11-12`)
+
+**Requisição (atualização parcial da observação):**
+```json
+{
+  "observacao": "Dia produtivo e leve"
+}
+```
+
+**Resposta de Sucesso (`200 OK`):**
+```json
+{
+  "checkin": {
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "data": "2026-11-12",
+    "humor": "bom",
+    "intensidade": null,
+    "sonoHoras": 7.5,
+    "estudou": true,
+    "atividadeFisica": false,
+    "relacoes": null,
+    "observacao": "Dia produtivo e leve",
+    "podeEditar": true,
+    "criadoEm": "2026-11-12T21:00:00Z",
+    "editadoEm": "2026-11-12T22:15:00Z"
+  }
+}
+```
+
+### Erro de Validação (`400 Bad Request`)
 
 ```json
 {
   "erro": {
     "codigo": "ENTRADA_INVALIDA",
     "mensagem": "Os dados enviados são inválidos.",
-    "detalhes": "(formato definido por detalhesDeValidacao)"
+    "detalhes": [
+      {
+        "campo": "sonoHoras",
+        "mensagem": "O valor de sonoHoras deve ser entre 0 e 24."
+      }
+    ]
   }
 }
 ```
 
-Conflito (`409`):
+### Conflito de Registro Duplicado (`409 Conflict`)
 
 ```json
 {
-  "erro": { "codigo": "CHECKIN_JA_EXISTE", "mensagem": "Já existe check-in nesta data." },
-  "checkin": { "data": "2026-11-11", "humor": "bom", "podeEditar": true }
+  "erro": {
+    "codigo": "CHECKIN_JA_EXISTE",
+    "mensagem": "Já existe check-in cadastrado nesta data."
+  },
+  "checkin": {
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "data": "2026-11-12",
+    "humor": "bom",
+    "podeEditar": true
+  }
 }
 ```
 
-## A confirmar
+### Edição Bloqueada por Prazo Expirado (`403 Forbidden`)
 
-1. **Intensidade:** a coluna é `NOT NULL` e o formulário do frontend não a coleta. O frontend não a deriva do humor. Opções: (1) tornar opcional no banco e no contrato *(recomendado)*; (2) o frontend passa a coletar, com o campo no Figma. Decisão necessária antes da MIND-60.
-2. **`observacao` e `eventos`:** o frontend envia `observacao` (280). O banco tem `eventos` (280). Confirmar que são o mesmo campo.
-3. **Tolerância de data futura** por causa do fuso.
-4. **Caminhos** das rotas e `PUT` x `PATCH`.
-5. **Dependência (middleware de sessão):** as rotas precisam de um middleware que valide o `Bearer` JWT e confirme no banco que a sessão (`sid`) ainda existe, como o `GET /auth/me` já faz (MIND-18). O papel nunca vem do JWT, e um JWT expirado nunca concede acesso. A função `usuarioDaSessao(token)` já faz essa validação e é chamada de dentro do `sessaoController`. O middleware pode reaproveitá-la, e será criado na MIND-60.
+```json
+{
+  "erro": {
+    "codigo": "CHECKIN_NAO_EDITAVEL",
+    "mensagem": "O check-in não pode mais ser editado pois a janela do dia encerrou."
+  }
+}
+```
 
-## Casos de teste para a MIND-60 e a MIND-62
+## Arquitetura & Implementação (MIND-60 / MIND-62)
 
-- Usuário A não lê nem edita o check-in do usuário B (`404`).
-- Requisição sem token ou com token expirado (`401`).
-- Data futura e data em formato inválido (`400`).
-- Humor fora do enum, `sonoHoras` fora de 0 a 24, observação com mais de 280 caracteres (`400`).
-- Campo desconhecido no corpo (`400`).
-- Segundo `POST` na mesma data (`409`, devolvendo o registro existente).
-- `GET` sem registro (`200` com `checkin: null`).
-- `PUT` em data sem registro (`404`).
-- `podeEditar` retorna `true` no dia atual e `false` para check-ins de dias anteriores.
-- Testes de integração com PostgreSQL real (o CI usa o banco `mindcheck_test` criado com o `init.sql`) e dados sintéticos, sem dados reais.
-- Se a intensidade virar opcional, a mudança vai nos três lugares do guia do banco: `prisma/init.sql` (o CI usa esse arquivo), um novo `prisma/patches/002-...sql` e o `prisma/schema.prisma`, seguido de `prisma:generate`.
+1. **Alteração de Schema (MIND-60):** alterar a coluna `intensidade` da tabela `checkin_diario` de `NOT NULL` para `NULL` (opcional). Aplicar nos 3 arquivos de referência:
+   - `prisma/init.sql` (banco de dados inicial e CI)
+   - `prisma/patches/002-checkin-intensidade-opcional.sql` (patch de migração)
+   - `prisma/schema.prisma` (schema do ORM + `npx prisma generate`)
+2. **Middleware de Autenticação:** reaproveitar a função `usuarioDaSessao(token)` do `sessaoController` para validar o token JWT de sessão e extrair o `usuarioId`.
+
+## Casos de Teste (Integration & Unit)
+
+- Garantir isolamento de ownership: Usuário A não visualiza nem altera o check-in do Usuário B (`404`).
+- Rejeitar requisições sem `Bearer token` válido (`401`).
+- Rejeitar datas futuras (baseadas no fuso `America/Sao_Paulo`) ou formatos fora de `YYYY-MM-DD` (`400`).
+- Validar limites de campos (`sonoHoras` entre 0 e 24, `observacao` até 280 caracteres, enum de `humor`) com retorno no formato de array em `detalhes` (`400`).
+- Rejeitar criação duplicada para a mesma data (`409`, retornando o registro existente).
+- Permitir atualizações parciais via `PATCH`, garantindo que campos não informados preservam o valor original no banco.
+- Bloquear edições via `PATCH` quando executadas fora da janela do dia (`403 CHECKIN_NAO_EDITAVEL`).
+- Retornar `{ "checkin": null }` com status `200` ao consultar uma data válida que não possui check-in.
