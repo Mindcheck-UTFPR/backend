@@ -17,6 +17,7 @@ vi.mock('./config/prisma.js', () => ({
     },
     checkin_diario: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -318,5 +319,183 @@ describe('check-in diário (MIND-60)', () => {
       mensagem: 'O check-in não pode mais ser editado pois a janela do dia encerrou.',
     })
     expect(prisma.checkin_diario.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('histórico e consulta de check-ins (MIND-62)', () => {
+  const hoje = hojeEmBrasilia()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(prisma.sessao.findUnique).mockImplementation((({ where }: { where: { id: number } }) => {
+      if (where.id === 4) return Promise.resolve(sessaoA)
+      if (where.id === 5) return Promise.resolve(sessaoB)
+      return Promise.resolve(null)
+    }) as never)
+  })
+
+  it('consulta check-in por data (GET /checkins?data=YYYY-MM-DD) do usuário autenticado', async () => {
+    const token = await emitirAccessToken(usuarioA, 4)
+    const criadoEm = new Date('2026-11-16T14:00:00.000Z')
+
+    vi.mocked(prisma.checkin_diario.findUnique).mockResolvedValue({
+      id: 99,
+      usuario_id: 7,
+      data: new Date(`${hoje}T00:00:00.000Z`),
+      humor: 'muito_bom',
+      intensidade: 5,
+      sono_horas: '8.0' as never,
+      estudou: true,
+      atividade_fisica: true,
+      relacoes: 4,
+      eventos: 'Dia excelente',
+      criado_em: criadoEm,
+      editado_em: null,
+    })
+
+    const resposta = await request(app)
+      .get(`/checkins?data=${hoje}`)
+      .auth(token, { type: 'bearer' })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.headers['cache-control']).toBe('no-store')
+    expect(prisma.checkin_diario.findUnique).toHaveBeenCalledWith({
+      where: {
+        usuario_id_data: {
+          usuario_id: 7,
+          data: new Date(`${hoje}T00:00:00.000Z`),
+        },
+      },
+    })
+    expect(resposta.body).toEqual({
+      checkin: {
+        id: '99',
+        data: hoje,
+        humor: 'muito_bom',
+        intensidade: 5,
+        sonoHoras: 8,
+        estudou: true,
+        atividadeFisica: true,
+        relacoes: 4,
+        observacao: 'Dia excelente',
+        podeEditar: true,
+        criadoEm: criadoEm.toISOString(),
+        editadoEm: null,
+      },
+    })
+  })
+
+  it('retorna 200 com { checkin: null } quando não há registro na data consultada', async () => {
+    const token = await emitirAccessToken(usuarioA, 4)
+    vi.mocked(prisma.checkin_diario.findUnique).mockResolvedValue(null)
+
+    const resposta = await request(app)
+      .get(`/checkins?data=${hoje}`)
+      .auth(token, { type: 'bearer' })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.headers['cache-control']).toBe('no-store')
+    expect(resposta.body).toEqual({ checkin: null })
+  })
+
+  it('lista histórico ordenado por data decrescente apenas do usuário da sessão', async () => {
+    const token = await emitirAccessToken(usuarioA, 4)
+
+    vi.mocked(prisma.checkin_diario.findMany).mockResolvedValue([
+      {
+        id: 20,
+        usuario_id: 7,
+        data: new Date(`${hoje}T00:00:00.000Z`),
+        humor: 'bom',
+        intensidade: 4,
+        sono_horas: '7.5' as never,
+        estudou: true,
+        atividade_fisica: false,
+        relacoes: null,
+        eventos: 'Hoje',
+        criado_em: new Date('2026-11-16T12:00:00.000Z'),
+        editado_em: null,
+      },
+      {
+        id: 19,
+        usuario_id: 7,
+        data: new Date('2026-11-10T00:00:00.000Z'),
+        humor: 'neutro',
+        intensidade: null,
+        sono_horas: null,
+        estudou: null,
+        atividade_fisica: null,
+        relacoes: null,
+        eventos: null,
+        criado_em: new Date('2026-11-10T18:00:00.000Z'),
+        editado_em: null,
+      },
+    ])
+
+    const resposta = await request(app)
+      .get('/checkins')
+      .auth(token, { type: 'bearer' })
+
+    expect(resposta.status).toBe(200)
+    expect(resposta.headers['cache-control']).toBe('no-store')
+    expect(prisma.checkin_diario.findMany).toHaveBeenCalledWith({
+      where: { usuario_id: 7 },
+      orderBy: { data: 'desc' },
+    })
+    expect(resposta.body.checkins).toHaveLength(2)
+    expect(resposta.body.checkins[0]).toMatchObject({
+      id: '20',
+      data: hoje,
+      observacao: 'Hoje',
+      podeEditar: true,
+    })
+    expect(resposta.body.checkins[1]).toMatchObject({
+      id: '19',
+      data: '2026-11-10',
+      observacao: null,
+      podeEditar: false,
+    })
+  })
+
+  it('aplica filtros dataInicio, dataFim e limite na listagem do histórico', async () => {
+    const token = await emitirAccessToken(usuarioA, 4)
+    vi.mocked(prisma.checkin_diario.findMany).mockResolvedValue([])
+
+    const resposta = await request(app)
+      .get('/checkins?dataInicio=2026-11-01&dataFim=2026-11-15&limite=10')
+      .auth(token, { type: 'bearer' })
+
+    expect(resposta.status).toBe(200)
+    expect(prisma.checkin_diario.findMany).toHaveBeenCalledWith({
+      where: {
+        usuario_id: 7,
+        data: {
+          gte: new Date('2026-11-01T00:00:00.000Z'),
+          lte: new Date('2026-11-15T00:00:00.000Z'),
+        },
+      },
+      orderBy: { data: 'desc' },
+      take: 10,
+    })
+    expect(resposta.body).toEqual({ checkins: [] })
+  })
+
+  it('rejeita parâmetros inválidos na consulta (400 ENTRADA_INVALIDA)', async () => {
+    const token = await emitirAccessToken(usuarioA, 4)
+
+    const periodoInvertido = await request(app)
+      .get('/checkins?dataInicio=2026-11-20&dataFim=2026-11-10')
+      .auth(token, { type: 'bearer' })
+
+    expect(periodoInvertido.status).toBe(400)
+    expect(periodoInvertido.body.erro.codigo).toBe('ENTRADA_INVALIDA')
+
+    const parametroDesconhecido = await request(app)
+      .get('/checkins?usuarioId=8')
+      .auth(token, { type: 'bearer' })
+
+    expect(parametroDesconhecido.status).toBe(400)
+    expect(parametroDesconhecido.body.erro.codigo).toBe('ENTRADA_INVALIDA')
+    expect(prisma.checkin_diario.findMany).not.toHaveBeenCalled()
   })
 })

@@ -2,18 +2,55 @@ import type { NextFunction, Response } from 'express'
 import type { RequisicaoAutenticada } from '../middlewares/autenticacaoMiddleware.js'
 import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import {
+  consultarCheckinPorData,
   criarCheckin,
   editarCheckin,
   ErroCheckinDuplicado,
+  listarHistoricoCheckins,
 } from '../services/checkinService.js'
 import { entradaInvalidaResponder } from '../utils/erro.js'
 import {
+  consultarCheckinsQuerySchema,
   criarCheckinSchema,
   editarCheckinSchema,
   parametroDataSchema,
 } from '../validators/checkinValidator.js'
 
 export class CheckinController {
+  consultar = async (
+    request: RequisicaoAutenticada,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      if (!request.usuario) {
+        throw new ErroAplicacao(401, 'SESSAO_INVALIDA', 'Entre para continuar.')
+      }
+
+      const query = consultarCheckinsQuerySchema.safeParse(request.query)
+      if (!query.success) {
+        entradaInvalidaResponder(response, query.error)
+        return
+      }
+
+      if (query.data.data) {
+        const checkin = await consultarCheckinPorData(request.usuario.id, query.data.data)
+        response.status(200).json({ checkin })
+        return
+      }
+
+      const checkins = await listarHistoricoCheckins(request.usuario.id, {
+        ...(query.data.dataInicio !== undefined ? { dataInicio: query.data.dataInicio } : {}),
+        ...(query.data.dataFim !== undefined ? { dataFim: query.data.dataFim } : {}),
+        ...(query.data.limite !== undefined ? { limite: query.data.limite } : {}),
+      })
+
+      response.status(200).json({ checkins })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
   criar = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
     try {
       if (!request.usuario) {

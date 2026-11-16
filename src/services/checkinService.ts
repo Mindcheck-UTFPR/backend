@@ -153,3 +153,53 @@ export class ErroCheckinDuplicado extends Error {
     this.checkin = checkin
   }
 }
+
+export async function consultarCheckinPorData(
+  usuarioId: number,
+  data: string,
+): Promise<CheckinResposta | null> {
+  const dataBanco = dataStringParaDateBanco(data)
+
+  const registro = await prisma.checkin_diario.findUnique({
+    where: {
+      usuario_id_data: {
+        usuario_id: usuarioId,
+        data: dataBanco,
+      },
+    },
+  })
+
+  return registro ? formatarCheckin(registro) : null
+}
+
+export interface FiltrosHistoricoCheckin {
+  dataInicio?: string
+  dataFim?: string
+  limite?: number
+}
+
+export async function listarHistoricoCheckins(
+  usuarioId: number,
+  filtros: FiltrosHistoricoCheckin = {},
+): Promise<CheckinResposta[]> {
+  const filtroData: Prisma.DateTimeFilter = {}
+
+  if (filtros.dataInicio) {
+    filtroData.gte = dataStringParaDateBanco(filtros.dataInicio)
+  }
+
+  if (filtros.dataFim) {
+    filtroData.lte = dataStringParaDateBanco(filtros.dataFim)
+  }
+
+  const registros = await prisma.checkin_diario.findMany({
+    where: {
+      usuario_id: usuarioId,
+      ...(filtros.dataInicio || filtros.dataFim ? { data: filtroData } : {}),
+    },
+    orderBy: { data: 'desc' },
+    ...(filtros.limite !== undefined ? { take: filtros.limite } : {}),
+  })
+
+  return registros.map(formatarCheckin)
+}

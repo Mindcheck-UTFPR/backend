@@ -81,5 +81,41 @@ export const editarCheckinSchema = z.strictObject(
   { error: 'Campo não permitido na requisição.' },
 )
 
+const dataOpcionalQuery = z
+  .string()
+  .refine(dataIsoValida, 'Informe uma data válida no formato YYYY-MM-DD.')
+  .optional()
+
+export const consultarCheckinsQuerySchema = z
+  .strictObject(
+    {
+      data: dataOpcionalQuery,
+      dataInicio: dataOpcionalQuery,
+      dataFim: dataOpcionalQuery,
+      limite: z.coerce
+        .number({ error: 'O limite deve ser um número inteiro.' })
+        .int('O limite deve ser um número inteiro.')
+        .min(1, 'O limite deve ser entre 1 e 365.')
+        .max(365, 'O limite deve ser entre 1 e 365.')
+        .optional(),
+    },
+    { error: 'Parâmetro de consulta não permitido.' },
+  )
+  .refine(
+    (query) => !(query.data && (query.dataInicio || query.dataFim || query.limite !== undefined)),
+    {
+      message: 'Não combine o parâmetro data com filtros de período ou limite.',
+      path: ['data'],
+    },
+  )
+  .refine(
+    (query) => !(query.dataInicio && query.dataFim && query.dataInicio > query.dataFim),
+    {
+      message: 'dataInicio não pode ser maior que dataFim.',
+      path: ['dataInicio'],
+    },
+  )
+
+export type ConsultarCheckinsQuery = z.infer<typeof consultarCheckinsQuerySchema>
 export type CriarCheckinEntrada = z.infer<typeof criarCheckinSchema>
 export type EditarCheckinEntrada = z.infer<typeof editarCheckinSchema>
