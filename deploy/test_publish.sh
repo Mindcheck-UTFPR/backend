@@ -11,6 +11,7 @@ printf 'name: fixture\n' > "$root/releases/$sha/compose.production.yml"
 printf 'SELECT 1;\n' > "$root/releases/$sha/prisma/patches.sql"
 mkdir -p "$root/releases/$sha/prisma/patches"
 mv "$root/releases/$sha/prisma/patches.sql" "$root/releases/$sha/prisma/patches/001-usuario-papel.sql"
+printf 'SELECT 1;\n' > "$root/releases/$sha/prisma/patches/002-checkin-intensidade-opcional.sql"
 cat > "$fixture/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail

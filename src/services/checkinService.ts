@@ -4,6 +4,7 @@ import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import {
   dataStringParaDateBanco,
   dateBancoParaDataString,
+  hojeEmBrasilia,
   podeEditarCheckin,
 } from '../utils/dataBrasil.js'
 import type { CriarCheckinEntrada, EditarCheckinEntrada } from '../validators/checkinValidator.js'
@@ -45,7 +46,7 @@ export async function criarCheckin(
   usuarioId: number,
   entrada: CriarCheckinEntrada,
 ): Promise<CheckinResposta> {
-  const dataBanco = dataStringParaDateBanco(entrada.data)
+  const dataBanco = dataStringParaDateBanco(hojeEmBrasilia())
 
   const existente = await prisma.checkin_diario.findUnique({
     where: {

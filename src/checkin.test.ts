@@ -102,7 +102,7 @@ describe('check-in diário (MIND-60)', () => {
     expect(tokenInvalido.body.erro.codigo).toBe('SESSAO_INVALIDA')
   })
 
-  it('rejeita datas futuras, formatos inválidos, limites e campos desconhecidos com 400 e detalhes', async () => {
+  it('rejeita data enviada pelo cliente, valores inválidos e campos desconhecidos com 400 e detalhes', async () => {
     const token = await emitirAccessToken(usuarioA, 4)
 
     const resposta = await request(app)
@@ -148,7 +148,6 @@ describe('check-in diário (MIND-60)', () => {
       .post('/checkins')
       .auth(token, { type: 'bearer' })
       .send({
-        data: hoje,
         humor: 'bom',
         sonoHoras: 7.5,
         estudou: true,
@@ -157,6 +156,7 @@ describe('check-in diário (MIND-60)', () => {
       })
 
     expect(resposta.status).toBe(201)
+    expect(prisma.checkin_diario.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ data: new Date(`${hoje}T00:00:00.000Z`) }) }))
     expect(resposta.headers['cache-control']).toBe('no-store')
     expect(resposta.body).toEqual({
       checkin: {
@@ -198,7 +198,7 @@ describe('check-in diário (MIND-60)', () => {
     const resposta = await request(app)
       .post('/checkins')
       .auth(token, { type: 'bearer' })
-      .send({ data: hoje, humor: 'neutro' })
+      .send({ humor: 'neutro' })
 
     expect(resposta.status).toBe(409)
     expect(resposta.body.erro.codigo).toBe('CHECKIN_JA_EXISTE')

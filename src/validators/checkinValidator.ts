@@ -1,15 +1,7 @@
 import { z } from 'zod'
-import { dataIsoValida, hojeEmBrasilia } from '../utils/dataBrasil.js'
+import { dataIsoValida } from '../utils/dataBrasil.js'
 
 const HUMORES_VALIDOS = ['muito_baixo', 'baixo', 'neutro', 'bom', 'muito_bom'] as const
-
-const dataCheckin = z
-  .string({ error: 'Informe a data do check-in.' })
-  .refine(dataIsoValida, 'Informe uma data válida no formato YYYY-MM-DD.')
-  .refine(
-    (valor) => valor <= hojeEmBrasilia(),
-    'Não é permitido registrar check-in em data futura.',
-  )
 
 const humor = z.enum(HUMORES_VALIDOS, {
   error: 'Informe um nível de humor válido (muito_baixo, baixo, neutro, bom ou muito_bom).',
@@ -56,7 +48,6 @@ export const parametroDataSchema = z.object({
 
 export const criarCheckinSchema = z.strictObject(
   {
-    data: dataCheckin,
     humor,
     intensidade: intensidade.optional().default(null),
     sonoHoras: sonoHoras.optional().default(null),
