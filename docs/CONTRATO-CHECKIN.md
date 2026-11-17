@@ -23,8 +23,8 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 
 | JSON | Coluna | Tipo e regra | Obrigatório |
 |---|---|---|---|
-| `id` | `id` | `string` (UUID), identificador único do registro | apenas resposta |
-| `data` | `data` | `YYYY-MM-DD`, não futura (`America/Sao_Paulo`) | sim no `POST` |
+| `id` | `id` | `string` contendo o identificador numérico do banco | apenas resposta |
+| `data` | `data` | `YYYY-MM-DD` do dia em `America/Sao_Paulo`, definido pela API | apenas resposta |
 | `humor` | `humor` | `muito_baixo`, `baixo`, `neutro`, `bom` ou `muito_bom` | sim |
 | `intensidade` | `intensidade` | inteiro de 1 a 5, ou `null` | não (opcional; migration na MIND-60) |
 | `sonoHoras` | `sono_horas` | número de 0 a 24, até uma casa decimal, ou `null` | não |
@@ -47,8 +47,8 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 
 ### Detalhes das operações
 
-1. **`GET /checkins?data=YYYY-MM-DD`:** Se `data` for omitido na query, assume a data atual em `America/Sao_Paulo`. Retorna `200` com `{ "checkin": null }` caso o usuário ainda não possua registro no dia (diferenciando consulta sem dados de erros HTTP).
-2. **`POST /checkins`:** Cria o registro do dia. Se o usuário já tiver registrado check-in na data, retorna `409 CHECKIN_JA_EXISTE`.
+1. **`GET /checkins?data=YYYY-MM-DD`:** Retorna `200` com `{ "checkin": null }` caso o usuário não possua registro na data. A consulta sem data lista o histórico.
+2. **`POST /checkins`:** A API determina a data atual em `America/Sao_Paulo`; o corpo não contém `data`. Se o usuário já tiver registrado check-in no dia, retorna `409 CHECKIN_JA_EXISTE`.
 3. **`PATCH /checkins/:data`:** Realiza atualização parcial do check-in da data informada.
    - Campos omitidos no JSON mantêm os valores atuais gravados no banco.
    - Campos passados explicitamente como `null` limpam o valor no banco.
@@ -71,7 +71,6 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 **Requisição:**
 ```json
 {
-  "data": "2026-11-12",
   "humor": "bom",
   "sonoHoras": 7.5,
   "estudou": true,
@@ -84,7 +83,7 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 ```json
 {
   "checkin": {
-    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "id": "42",
     "data": "2026-11-12",
     "humor": "bom",
     "intensidade": null,
@@ -113,7 +112,7 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 ```json
 {
   "checkin": {
-    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "id": "42",
     "data": "2026-11-12",
     "humor": "bom",
     "intensidade": null,
@@ -155,7 +154,7 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
     "mensagem": "Já existe check-in cadastrado nesta data."
   },
   "checkin": {
-    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "id": "42",
     "data": "2026-11-12",
     "humor": "bom",
     "podeEditar": true
