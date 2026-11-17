@@ -8,7 +8,7 @@ import oRotas from './routes/rotas.js'
 export const app = express()
 
 app.disable('x-powered-by')
-app.use(cors({ origin: env.CORS_ORIGIN }))
+app.use(cors({ origin: [env.CORS_ORIGIN, 'https://localhost'] }))
 app.use(express.json())
 
 app.get('/health', (_request, response) => {
