@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { CadastroController, LoginController } from '../controllers/autenticacaoController.js'
 import { CheckinController } from '../controllers/checkinController.js'
 import { autenticacaoMiddleware } from '../middlewares/autenticacaoMiddleware.js'
-import { errosMiddleware } from '../middlewares/errosMiddleware.js'
 import { SessaoController } from '../controllers/sessaoController.js'
 import { env } from '../config/env.js'
 
@@ -39,6 +38,5 @@ oRotasCheckin.patch('/:data', checkinController.editar)
 
 oRotas.use('/checkins', oRotasCheckin)
 
-oRotas.use(errosMiddleware)
 
 export default oRotas

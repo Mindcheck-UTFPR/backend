@@ -1,4 +1,4 @@
-# Mindcheck API — primeira imagem (v0.1.0)
+# Mindcheck API — primeira imagem (v0.0.3)
 FROM node:22-bookworm-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
@@ -20,7 +20,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 LABEL org.opencontainers.image.title="mindcheck-backend"
-LABEL org.opencontainers.image.version="0.1.0"
+LABEL org.opencontainers.image.version="0.0.3"
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules

@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: mindcheck-backend:0.1.0
+    image: mindcheck-backend:0.0.3
     ports:
       - "127.0.0.1:3000:3000"
     environment:
