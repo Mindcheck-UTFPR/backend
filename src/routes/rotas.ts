@@ -32,6 +32,8 @@ const checkinController = new CheckinController()
 oRotasCheckin.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
 oRotasCheckin.use(autenticacaoMiddleware)
 oRotasCheckin.get('/', checkinController.consultar)
+oRotasCheckin.get('/hoje', checkinController.hoje)
+oRotasCheckin.get('/:id', checkinController.detalhar)
 oRotasCheckin.post('/', checkinController.criar)
 oRotasCheckin.patch('/:data', checkinController.editar)
 

@@ -3,12 +3,14 @@ import type { RequisicaoAutenticada } from '../middlewares/autenticacaoMiddlewar
 import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import {
   consultarCheckinPorData,
+  consultarCheckinPorId,
   criarCheckin,
   editarCheckin,
   ErroCheckinDuplicado,
   listarHistoricoCheckins,
 } from '../services/checkinService.js'
 import { entradaInvalidaResponder } from '../utils/erro.js'
+import { hojeEmBrasilia } from '../utils/dataBrasil.js'
 import {
   consultarCheckinsQuerySchema,
   criarCheckinSchema,
@@ -17,6 +19,15 @@ import {
 } from '../validators/checkinValidator.js'
 
 export class CheckinController {
+  hoje = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!request.usuario) throw new ErroAplicacao(401, 'SESSAO_INVALIDA', 'Entre para continuar.')
+      response.json({ checkin: await consultarCheckinPorData(request.usuario.id, hojeEmBrasilia()) })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
   consultar = async (
     request: RequisicaoAutenticada,
     response: Response,
@@ -39,13 +50,28 @@ export class CheckinController {
         return
       }
 
-      const checkins = await listarHistoricoCheckins(request.usuario.id, {
+      const resultado = await listarHistoricoCheckins(request.usuario.id, {
         ...(query.data.dataInicio !== undefined ? { dataInicio: query.data.dataInicio } : {}),
         ...(query.data.dataFim !== undefined ? { dataFim: query.data.dataFim } : {}),
         ...(query.data.limite !== undefined ? { limite: query.data.limite } : {}),
+        ...(query.data.pagina !== undefined ? { pagina: query.data.pagina } : {}),
+        ...(query.data.humor !== undefined ? { humor: query.data.humor } : {}),
       })
 
-      response.status(200).json({ checkins })
+      response.status(200).json(resultado)
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  detalhar = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!request.usuario) throw new ErroAplicacao(401, 'SESSAO_INVALIDA', 'Entre para continuar.')
+      const id = Number(request.params.id)
+      if (!/^\d+$/.test(String(request.params.id)) || !Number.isSafeInteger(id) || id < 1 || id > 2147483647) {
+        throw new ErroAplicacao(400, 'ENTRADA_INVALIDA', 'Identificador inválido.')
+      }
+      response.json({ checkin: await consultarCheckinPorId(request.usuario.id, id) })
     } catch (erro) {
       next(erro)
     }

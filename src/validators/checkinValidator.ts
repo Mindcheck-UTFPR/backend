@@ -89,11 +89,13 @@ export const consultarCheckinsQuerySchema = z
         .min(1, 'O limite deve ser entre 1 e 365.')
         .max(365, 'O limite deve ser entre 1 e 365.')
         .optional(),
+      pagina: z.coerce.number().int().min(1).max(10000).optional(),
+      humor: humor.optional(),
     },
     { error: 'Parâmetro de consulta não permitido.' },
   )
   .refine(
-    (query) => !(query.data && (query.dataInicio || query.dataFim || query.limite !== undefined)),
+    (query) => !(query.data && (query.dataInicio || query.dataFim || query.limite !== undefined || query.pagina !== undefined || query.humor)),
     {
       message: 'Não combine o parâmetro data com filtros de período ou limite.',
       path: ['data'],

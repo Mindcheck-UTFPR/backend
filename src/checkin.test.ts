@@ -18,6 +18,7 @@ vi.mock('./config/prisma.js', () => ({
     checkin_diario: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -441,6 +442,8 @@ describe('histórico e consulta de check-ins (MIND-62)', () => {
     expect(prisma.checkin_diario.findMany).toHaveBeenCalledWith({
       where: { usuario_id: 7 },
       orderBy: { data: 'desc' },
+      skip: 0,
+      take: 21,
     })
     expect(resposta.body.checkins).toHaveLength(2)
     expect(resposta.body.checkins[0]).toMatchObject({
@@ -475,9 +478,10 @@ describe('histórico e consulta de check-ins (MIND-62)', () => {
         },
       },
       orderBy: { data: 'desc' },
-      take: 10,
+      skip: 0,
+      take: 11,
     })
-    expect(resposta.body).toEqual({ checkins: [] })
+    expect(resposta.body).toEqual({ checkins: [], temProxima: false })
   })
 
   it('rejeita parâmetros inválidos na consulta (400 ENTRADA_INVALIDA)', async () => {

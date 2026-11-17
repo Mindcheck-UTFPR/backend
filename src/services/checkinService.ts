@@ -177,13 +177,17 @@ export interface FiltrosHistoricoCheckin {
   dataInicio?: string
   dataFim?: string
   limite?: number
+  pagina?: number
+  humor?: checkin_diario['humor']
 }
 
 export async function listarHistoricoCheckins(
   usuarioId: number,
   filtros: FiltrosHistoricoCheckin = {},
-): Promise<CheckinResposta[]> {
+): Promise<{ checkins: CheckinResposta[]; temProxima: boolean }> {
   const filtroData: Prisma.DateTimeFilter = {}
+  const limite = filtros.limite ?? 20
+  const pagina = filtros.pagina ?? 1
 
   if (filtros.dataInicio) {
     filtroData.gte = dataStringParaDateBanco(filtros.dataInicio)
@@ -197,10 +201,18 @@ export async function listarHistoricoCheckins(
     where: {
       usuario_id: usuarioId,
       ...(filtros.dataInicio || filtros.dataFim ? { data: filtroData } : {}),
+      ...(filtros.humor ? { humor: filtros.humor } : {}),
     },
     orderBy: { data: 'desc' },
-    ...(filtros.limite !== undefined ? { take: filtros.limite } : {}),
+    skip: (pagina - 1) * limite,
+    take: limite + 1,
   })
 
-  return registros.map(formatarCheckin)
+  return { checkins: registros.slice(0, limite).map(formatarCheckin), temProxima: registros.length > limite }
+}
+
+export async function consultarCheckinPorId(usuarioId: number, id: number): Promise<CheckinResposta> {
+  const registro = await prisma.checkin_diario.findFirst({ where: { id, usuario_id: usuarioId } })
+  if (!registro) throw new ErroAplicacao(404, 'CHECKIN_NAO_ENCONTRADO', 'Check-in não encontrado.')
+  return formatarCheckin(registro)
 }
