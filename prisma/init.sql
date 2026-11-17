@@ -49,7 +49,7 @@ CREATE TABLE checkin_diario (
   usuario_id        INTEGER NOT NULL REFERENCES usuario (id) ON DELETE CASCADE,
   data              DATE NOT NULL,
   humor             humor_nivel NOT NULL,
-  intensidade       SMALLINT NOT NULL,
+  intensidade       SMALLINT,
   sono_horas        NUMERIC(3, 1),
   estudou           BOOLEAN,
   atividade_fisica  BOOLEAN,
@@ -58,7 +58,7 @@ CREATE TABLE checkin_diario (
   criado_em         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   editado_em        TIMESTAMPTZ,
   CONSTRAINT checkin_diario_usuario_data_unique UNIQUE (usuario_id, data),
-  CONSTRAINT checkin_diario_intensidade_chk CHECK (intensidade BETWEEN 1 AND 5),
+  CONSTRAINT checkin_diario_intensidade_chk CHECK (intensidade IS NULL OR intensidade BETWEEN 1 AND 5),
   CONSTRAINT checkin_diario_sono_horas_chk CHECK (sono_horas IS NULL OR (sono_horas >= 0 AND sono_horas <= 24)),
   CONSTRAINT checkin_diario_relacoes_chk CHECK (relacoes IS NULL OR relacoes BETWEEN 1 AND 5)
 );
