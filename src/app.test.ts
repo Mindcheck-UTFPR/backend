@@ -10,3 +10,18 @@ process.env.REFRESH_DIAS ??= '7'
 process.env.TERMOS_VERSAO ??= '1.0'
 const { app } = await import('./app.js')
 describe('health endpoint', () => { it('reports that the API process is healthy', async () => { const response = await request(app).get('/health'); expect(response.status).toBe(200); expect(response.body).toEqual({ status: 'ok', service: 'mindcheck-backend' }) }) })
+
+it('responde em JSON quando a rota não existe', async () => {
+  const response = await request(app).get('/auth/rota-inexistente')
+  expect(response.status).toBe(404)
+  expect(response.body).toEqual({
+    erro: { codigo: 'ROTA_NAO_ENCONTRADA', mensagem: 'Rota não encontrada.' },
+  })
+})
+
+
+it('permite a origem do aplicativo Android e rejeita origens não autorizadas', async () => {
+  const preflight = (origin: string) => request(app).options('/checkins').set('Origin', origin).set('Access-Control-Request-Method', 'GET').set('Access-Control-Request-Headers', 'authorization')
+  expect((await preflight('https://localhost')).headers['access-control-allow-origin']).toBe('https://localhost')
+  expect((await preflight('https://nao-autorizado.example')).headers['access-control-allow-origin']).toBeUndefined()
+})
