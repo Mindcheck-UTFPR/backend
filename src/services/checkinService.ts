@@ -154,3 +154,65 @@ export class ErroCheckinDuplicado extends Error {
     this.checkin = checkin
   }
 }
+
+export async function consultarCheckinPorData(
+  usuarioId: number,
+  data: string,
+): Promise<CheckinResposta | null> {
+  const dataBanco = dataStringParaDateBanco(data)
+
+  const registro = await prisma.checkin_diario.findUnique({
+    where: {
+      usuario_id_data: {
+        usuario_id: usuarioId,
+        data: dataBanco,
+      },
+    },
+  })
+
+  return registro ? formatarCheckin(registro) : null
+}
+
+export interface FiltrosHistoricoCheckin {
+  dataInicio?: string
+  dataFim?: string
+  limite?: number
+  pagina?: number
+  humor?: checkin_diario['humor']
+}
+
+export async function listarHistoricoCheckins(
+  usuarioId: number,
+  filtros: FiltrosHistoricoCheckin = {},
+): Promise<{ checkins: CheckinResposta[]; temProxima: boolean }> {
+  const filtroData: Prisma.DateTimeFilter = {}
+  const limite = filtros.limite ?? 20
+  const pagina = filtros.pagina ?? 1
+
+  if (filtros.dataInicio) {
+    filtroData.gte = dataStringParaDateBanco(filtros.dataInicio)
+  }
+
+  if (filtros.dataFim) {
+    filtroData.lte = dataStringParaDateBanco(filtros.dataFim)
+  }
+
+  const registros = await prisma.checkin_diario.findMany({
+    where: {
+      usuario_id: usuarioId,
+      ...(filtros.dataInicio || filtros.dataFim ? { data: filtroData } : {}),
+      ...(filtros.humor ? { humor: filtros.humor } : {}),
+    },
+    orderBy: { data: 'desc' },
+    skip: (pagina - 1) * limite,
+    take: limite + 1,
+  })
+
+  return { checkins: registros.slice(0, limite).map(formatarCheckin), temProxima: registros.length > limite }
+}
+
+export async function consultarCheckinPorId(usuarioId: number, id: number): Promise<CheckinResposta> {
+  const registro = await prisma.checkin_diario.findFirst({ where: { id, usuario_id: usuarioId } })
+  if (!registro) throw new ErroAplicacao(404, 'CHECKIN_NAO_ENCONTRADO', 'Check-in não encontrado.')
+  return formatarCheckin(registro)
+}

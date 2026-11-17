@@ -42,12 +42,15 @@ Esta tarefa **define** o contrato da API. Não implementa os endpoints (MIND-60 
 | Operação | Caminho | Sucesso | Erros |
 |---|---|---|---|
 | Consultar por data | `GET /checkins?data=YYYY-MM-DD` | `200` com `{ "checkin": {...} }` ou `{ "checkin": null }` | `400`, `401` |
+| Consultar o dia atual | `GET /checkins/hoje` | `200` com `{ "checkin": {...} }` ou `{ "checkin": null }` | `401` |
+| Consultar detalhe | `GET /checkins/:id` | `200` com `{ "checkin": {...} }` | `400`, `401`, `404` |
+| Listar histórico | `GET /checkins` | `200` com `{ "checkins": [...], "temProxima": true/false }` | `400`, `401` |
 | Criar | `POST /checkins` | `201` com `{ "checkin": {...} }` | `400`, `401`, `409` |
 | Editar (parcial) | `PATCH /checkins/:data` | `200` com `{ "checkin": {...} }` | `400`, `401`, `403`, `404` |
 
 ### Detalhes das operações
 
-1. **`GET /checkins?data=YYYY-MM-DD`:** Retorna `200` com `{ "checkin": null }` caso o usuário não possua registro na data. A consulta sem data lista o histórico.
+1. **`GET /checkins?data=YYYY-MM-DD`:** Retorna `200` com `{ "checkin": null }` caso o usuário não possua registro na data. `GET /checkins/hoje` calcula o dia no servidor. A consulta sem data lista o histórico, com filtros opcionais `dataInicio`, `dataFim`, `humor`, `pagina` e `limite`.
 2. **`POST /checkins`:** A API determina a data atual em `America/Sao_Paulo`; o corpo não contém `data`. Se o usuário já tiver registrado check-in no dia, retorna `409 CHECKIN_JA_EXISTE`.
 3. **`PATCH /checkins/:data`:** Realiza atualização parcial do check-in da data informada.
    - Campos omitidos no JSON mantêm os valores atuais gravados no banco.
