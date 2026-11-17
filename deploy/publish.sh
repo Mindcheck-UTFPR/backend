@@ -31,6 +31,7 @@ backup=$(mktemp "$root/backups/pre-auth-$sha.XXXXXXXX.dump")
 compose exec -T postgres pg_dump -U mindcheck -d mindcheck -Fc < /dev/null > "$backup"
 test -s "$backup"
 compose exec -T postgres psql -U mindcheck -d mindcheck -v ON_ERROR_STOP=1 --single-transaction < "$release/prisma/patches/001-usuario-papel.sql"
+compose exec -T postgres psql -U mindcheck -d mindcheck -v ON_ERROR_STOP=1 --single-transaction < "$release/prisma/patches/002-checkin-intensidade-opcional.sql"
 if ! compose up -d --wait --wait-timeout 180; then
   if [[ -n "$previous" && -f "$previous/compose.production.yml" ]]; then
     RELEASE_SHA="$(basename "$previous")" docker compose --env-file "$root/.env" -f "$previous/compose.production.yml" up -d --wait --wait-timeout 180
