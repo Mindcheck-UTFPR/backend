@@ -1,7 +1,9 @@
 import { Router } from 'express'
+import { AdministracaoController } from '../controllers/administracaoController.js'
 import { CadastroController, LoginController } from '../controllers/autenticacaoController.js'
 import { CheckinController } from '../controllers/checkinController.js'
 import { autenticacaoMiddleware } from '../middlewares/autenticacaoMiddleware.js'
+import { autorizacaoAdminMiddleware } from '../middlewares/autorizacaoMiddleware.js'
 import { SessaoController } from '../controllers/sessaoController.js'
 import { env } from '../config/env.js'
 
@@ -38,5 +40,16 @@ oRotasCheckin.patch('/:data', checkinController.editar)
 
 oRotas.use('/checkins', oRotasCheckin)
 
+/** Painel administrativo */
+const oRotasAdmin = Router()
+const administracaoController = new AdministracaoController()
+oRotasAdmin.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
+oRotasAdmin.use(autenticacaoMiddleware)
+oRotasAdmin.use(autorizacaoAdminMiddleware)
+oRotasAdmin.get('/questionarios', administracaoController.questionarios)
+oRotasAdmin.get('/usuarios', administracaoController.usuarios)
+oRotasAdmin.get('/auditoria', administracaoController.auditoria)
+
+oRotas.use('/admin', oRotasAdmin)
 
 export default oRotas
