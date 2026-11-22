@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { AdministracaoController } from '../controllers/administracaoController.js'
+import { AvaliacaoController } from '../controllers/avaliacaoController.js'
 import { QuestionarioController } from '../controllers/questionarioController.js'
 import { CadastroController, LoginController } from '../controllers/autenticacaoController.js'
 import { CheckinController } from '../controllers/checkinController.js'
@@ -58,5 +59,22 @@ oRotasAdmin.get('/usuarios', administracaoController.usuarios)
 oRotasAdmin.get('/auditoria', administracaoController.auditoria)
 
 oRotas.use('/admin', oRotasAdmin)
+
+/** Questionário publicado e envio do aluno */
+const oRotasQuestionario = Router()
+const avaliacaoController = new AvaliacaoController()
+oRotasQuestionario.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
+oRotasQuestionario.use(autenticacaoMiddleware)
+oRotasQuestionario.get('/', avaliacaoController.catalogo)
+oRotasQuestionario.get('/:questionarioId', avaliacaoController.estrutura)
+oRotasQuestionario.post('/:questionarioId/avaliacoes', avaliacaoController.enviar)
+
+const oRotasAvaliacao = Router()
+oRotasAvaliacao.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
+oRotasAvaliacao.use(autenticacaoMiddleware)
+oRotasAvaliacao.get('/:avaliacaoId', avaliacaoController.consultar)
+
+oRotas.use('/questionarios', oRotasQuestionario)
+oRotas.use('/avaliacoes', oRotasAvaliacao)
 
 export default oRotas
