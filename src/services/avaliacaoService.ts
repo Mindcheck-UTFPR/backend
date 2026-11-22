@@ -328,6 +328,66 @@ export async function enviarAvaliacao(usuarioId: number, questionarioId: number,
   return apresentada
 }
 
+export async function listarHistorico(
+  usuarioId: number,
+  filtros: { questionarioId?: number; limite?: number; pagina?: number } = {},
+) {
+  const limite = filtros.limite ?? 20
+  const pagina = filtros.pagina ?? 1
+  const registros = await prisma.avaliacao.findMany({
+    where: {
+      usuario_id: usuarioId,
+      concluida_em: { not: null },
+      ...(filtros.questionarioId
+        ? { questionario_versao: { questionario_id: filtros.questionarioId } }
+        : {}),
+    },
+    orderBy: { concluida_em: 'desc' },
+    skip: (pagina - 1) * limite,
+    take: limite + 1,
+    select: {
+      id: true,
+      versao_id: true,
+      concluida_em: true,
+      questionario_versao: {
+        select: {
+          versao: true,
+          questionario_id: true,
+          questionario: { select: { nome: true } },
+        },
+      },
+      resultado: {
+        select: {
+          pontuacao: true,
+          faixa_interpretacao: { select: { codigo: true, rotulo: true, texto_orientativo: true } },
+        },
+      },
+    },
+  })
+
+  const avaliacoes = registros.slice(0, limite).flatMap((registro) => {
+    if (!registro.concluida_em || !registro.resultado) return []
+    return [{
+      id: registro.id,
+      questionarioId: registro.questionario_versao.questionario_id,
+      questionarioNome: registro.questionario_versao.questionario.nome,
+      versaoId: registro.versao_id,
+      versao: registro.questionario_versao.versao,
+      concluidaEm: registro.concluida_em.toISOString(),
+      resultado: {
+        pontuacao: registro.resultado.pontuacao,
+        faixa: {
+          codigo: registro.resultado.faixa_interpretacao.codigo,
+          rotulo: registro.resultado.faixa_interpretacao.rotulo,
+          textoOrientativo: registro.resultado.faixa_interpretacao.texto_orientativo,
+        },
+      },
+    }]
+  })
+
+  return { avaliacoes, temProxima: registros.length > limite }
+}
+
 export async function consultarAvaliacao(usuarioId: number, avaliacaoId: number) {
   const registro = await prisma.avaliacao.findFirst({
     where: { id: avaliacaoId, usuario_id: usuarioId },

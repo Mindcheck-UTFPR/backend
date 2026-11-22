@@ -39,6 +39,12 @@ export const idAvaliacaoSchema = z.object({
   avaliacaoId: z.coerce.number().int().positive(),
 })
 
+export const historicoAvaliacaoQuerySchema = z.strictObject({
+  questionarioId: z.coerce.number().int().positive().optional(),
+  limite: z.coerce.number().int().min(1, 'O limite deve ser entre 1 e 50.').max(50, 'O limite deve ser entre 1 e 50.').optional(),
+  pagina: z.coerce.number().int().min(1).max(10000).optional(),
+})
+
 export type EnviarAvaliacaoEntrada = z.infer<typeof enviarAvaliacaoSchema>
 export type SalvarRascunhoAvaliacaoEntrada = z.infer<typeof salvarRascunhoAvaliacaoSchema>
 export type ConcluirAvaliacaoEntrada = z.infer<typeof concluirAvaliacaoSchema>

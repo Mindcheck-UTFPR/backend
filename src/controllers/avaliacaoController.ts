@@ -7,6 +7,7 @@ import {
   consultarAvaliacao,
   detalharParaResponder,
   enviarAvaliacao,
+  listarHistorico,
   listarParaResponder,
   salvarRascunho,
 } from '../services/avaliacaoService.js'
@@ -14,6 +15,7 @@ import { entradaInvalidaResponder } from '../utils/erro.js'
 import {
   concluirAvaliacaoSchema,
   enviarAvaliacaoSchema,
+  historicoAvaliacaoQuerySchema,
   idAvaliacaoSchema,
   salvarRascunhoAvaliacaoSchema,
 } from '../validators/avaliacaoValidator.js'
@@ -119,6 +121,20 @@ export class AvaliacaoController {
         return
       }
       response.json({ avaliacao: await concluirAvaliacao(usuario.id, params.data.avaliacaoId, entrada.data.revisao) })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  historico = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const usuario = exigirUsuario(request)
+      const consulta = historicoAvaliacaoQuerySchema.safeParse(request.query)
+      if (!consulta.success) {
+        entradaInvalidaResponder(response, consulta.error)
+        return
+      }
+      response.json(await listarHistorico(usuario.id, consulta.data))
     } catch (erro) {
       next(erro)
     }

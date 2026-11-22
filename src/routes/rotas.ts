@@ -73,6 +73,7 @@ oRotasQuestionario.post('/:questionarioId/avaliacoes', avaliacaoController.envia
 const oRotasAvaliacao = Router()
 oRotasAvaliacao.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
 oRotasAvaliacao.use(autenticacaoMiddleware)
+oRotasAvaliacao.get('/', avaliacaoController.historico)
 oRotasAvaliacao.get('/:avaliacaoId', avaliacaoController.consultar)
 oRotasAvaliacao.put('/:avaliacaoId', avaliacaoController.salvar)
 oRotasAvaliacao.post('/:avaliacaoId/concluir', avaliacaoController.concluir)
