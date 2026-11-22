@@ -151,6 +151,14 @@ CREATE TABLE resultado (
   CONSTRAINT resultado_avaliacao_unique UNIQUE (avaliacao_id)
 );
 
+CREATE TABLE publicacao_questionario (
+  id           INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id   INTEGER NOT NULL REFERENCES usuario (id) ON DELETE RESTRICT,
+  versao_id    INTEGER NOT NULL REFERENCES questionario_versao (id) ON DELETE RESTRICT,
+  operacao     VARCHAR(20) NOT NULL,
+  ocorrido_em  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 COMMENT ON TABLE usuario IS 'Conta do universitário e aceite de termos.';
 COMMENT ON TABLE sessao IS 'Refresh token. Logout apaga a linha.';
 COMMENT ON TABLE checkin_diario IS 'Hábito diário. Um registro por usuário por dia. Não usa pergunta/resposta.';
@@ -162,3 +170,4 @@ COMMENT ON TABLE faixa_interpretacao IS 'Critério da versão. Não é criado no
 COMMENT ON TABLE avaliacao IS 'Um envio do aluno. Não é diagnóstico.';
 COMMENT ON TABLE resposta IS 'opcao_id para pergunta fechada; texto para aberta.';
 COMMENT ON TABLE resultado IS 'Score automático (soma + faixa). Não é diagnóstico.';
+COMMENT ON TABLE publicacao_questionario IS 'Quem publicou a versão e quando. Sem enunciado, resposta ou humor.';

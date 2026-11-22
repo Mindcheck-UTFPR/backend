@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { AdministracaoController } from '../controllers/administracaoController.js'
+import { QuestionarioController } from '../controllers/questionarioController.js'
 import { CadastroController, LoginController } from '../controllers/autenticacaoController.js'
 import { CheckinController } from '../controllers/checkinController.js'
 import { autenticacaoMiddleware } from '../middlewares/autenticacaoMiddleware.js'
@@ -43,10 +44,16 @@ oRotas.use('/checkins', oRotasCheckin)
 /** Painel administrativo */
 const oRotasAdmin = Router()
 const administracaoController = new AdministracaoController()
+const questionarioController = new QuestionarioController()
 oRotasAdmin.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
 oRotasAdmin.use(autenticacaoMiddleware)
 oRotasAdmin.use(autorizacaoAdminMiddleware)
-oRotasAdmin.get('/questionarios', administracaoController.questionarios)
+oRotasAdmin.post('/questionarios', questionarioController.criar)
+oRotasAdmin.get('/questionarios', questionarioController.listar)
+oRotasAdmin.get('/questionarios/:questionarioId', questionarioController.detalhar)
+oRotasAdmin.put('/questionarios/:questionarioId/versoes/:versaoId', questionarioController.salvar)
+oRotasAdmin.post('/questionarios/:questionarioId/versoes', questionarioController.novaVersao)
+oRotasAdmin.post('/questionarios/:questionarioId/versoes/:versaoId/publicar', questionarioController.publicar)
 oRotasAdmin.get('/usuarios', administracaoController.usuarios)
 oRotasAdmin.get('/auditoria', administracaoController.auditoria)
 

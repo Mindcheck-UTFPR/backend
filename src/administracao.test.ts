@@ -15,6 +15,7 @@ vi.mock('./config/prisma.js', () => ({
     sessao: { findUnique: vi.fn() },
     usuario: { findMany: vi.fn() },
     questionario: { findMany: vi.fn() },
+    publicacao_questionario: { findMany: vi.fn() },
   },
 }))
 
@@ -100,17 +101,10 @@ describe('autorização do painel (MIND-77)', () => {
     expect(prisma.questionario.findMany).not.toHaveBeenCalled()
   })
 
-  it('devolve questionários, usuários e auditoria vazia para o administrador', async () => {
+  it('devolve usuários e auditoria vazia para o administrador', async () => {
     const token = await emitirAccessToken(administrador, 6)
 
-    vi.mocked(prisma.questionario.findMany).mockResolvedValue([
-      {
-        id: 3,
-        nome: 'Instrumento de teste',
-        ativo: true,
-        questionario_versao: [{ id: 11, versao: '1.0', ativa: false }],
-      },
-    ] as never)
+    vi.mocked(prisma.publicacao_questionario.findMany).mockResolvedValue([])
     vi.mocked(prisma.usuario.findMany).mockResolvedValue([
       {
         id: 9,
@@ -123,35 +117,8 @@ describe('autorização do painel (MIND-77)', () => {
       },
     ] as never)
 
-    const questionarios = await request(app).get('/admin/questionarios').auth(token, { type: 'bearer' })
     const usuarios = await request(app).get('/admin/usuarios').auth(token, { type: 'bearer' })
     const auditoria = await request(app).get('/admin/auditoria').auth(token, { type: 'bearer' })
-
-    expect(questionarios.status).toBe(200)
-    expect(questionarios.headers['cache-control']).toBe('no-store')
-    expect(questionarios.body).toEqual({
-      questionarios: [
-        {
-          id: 3,
-          nome: 'Instrumento de teste',
-          ativo: true,
-          versoes: [{ id: 11, versao: '1.0', ativa: false }],
-        },
-      ],
-    })
-    expect(questionarios.body.questionarios[0]).not.toHaveProperty('situacao')
-    expect(prisma.questionario.findMany).toHaveBeenCalledWith({
-      orderBy: { ordem: 'asc' },
-      select: {
-        id: true,
-        nome: true,
-        ativo: true,
-        questionario_versao: {
-          orderBy: { id: 'asc' },
-          select: { id: true, versao: true, ativa: true },
-        },
-      },
-    })
 
     expect(usuarios.status).toBe(200)
     expect(usuarios.body).toEqual({
