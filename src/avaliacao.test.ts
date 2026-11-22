@@ -99,6 +99,7 @@ describe('envio da avaliação', () => {
         versao: { id: 11, versao: '1.0', periodoReaplicacaoDias: 14 },
         podeResponder: true,
         disponivelEm: null,
+        rascunhoId: null,
       }],
     })
     expect(prisma.questionario.findMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -181,7 +182,12 @@ describe('envio da avaliação', () => {
       descricao: null,
       questionario_versao: [versaoPublicada],
     } as never)
-    vi.mocked(prisma.avaliacao.findFirst).mockResolvedValue({ criado_em: new Date() } as never)
+    vi.mocked(prisma.avaliacao.findFirst).mockImplementation((async ({ where }: { where: { concluida_em?: unknown } }) => {
+      if (where.concluida_em && typeof where.concluida_em === 'object') {
+        return { concluida_em: new Date() }
+      }
+      return null
+    }) as never)
 
     const resposta = await request(app).post('/questionarios/3/avaliacoes').auth(token, { type: 'bearer' }).send({
       respostas: [{ perguntaId: 1, opcaoId: 5 }],

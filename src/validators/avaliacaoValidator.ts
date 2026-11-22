@@ -10,9 +10,9 @@ const respostaAberta = z.strictObject({
   texto: z.string().trim().min(1, 'Informe o texto da resposta.').max(2000, 'A resposta deve ter no máximo 2000 caracteres.'),
 })
 
-export const enviarAvaliacaoSchema = z.strictObject({
-  respostas: z.array(z.union([respostaFechada, respostaAberta])),
-}).superRefine((valor, contexto) => {
+const respostas = z.array(z.union([respostaFechada, respostaAberta]))
+
+function respostasUnicas(valor: { respostas: { perguntaId: number }[] }, contexto: z.RefinementCtx) {
   const ids = new Set<number>()
   for (const resposta of valor.respostas) {
     if (ids.has(resposta.perguntaId)) {
@@ -20,6 +20,19 @@ export const enviarAvaliacaoSchema = z.strictObject({
     }
     ids.add(resposta.perguntaId)
   }
+}
+
+export const enviarAvaliacaoSchema = z.strictObject({
+  respostas,
+}).superRefine(respostasUnicas)
+
+export const salvarRascunhoAvaliacaoSchema = z.strictObject({
+  revisao: z.number().int().positive('Informe a revisão do rascunho.'),
+  respostas,
+}).superRefine(respostasUnicas)
+
+export const concluirAvaliacaoSchema = z.strictObject({
+  revisao: z.number().int().positive('Informe a revisão do rascunho.'),
 })
 
 export const idAvaliacaoSchema = z.object({
@@ -27,3 +40,5 @@ export const idAvaliacaoSchema = z.object({
 })
 
 export type EnviarAvaliacaoEntrada = z.infer<typeof enviarAvaliacaoSchema>
+export type SalvarRascunhoAvaliacaoEntrada = z.infer<typeof salvarRascunhoAvaliacaoSchema>
+export type ConcluirAvaliacaoEntrada = z.infer<typeof concluirAvaliacaoSchema>

@@ -120,14 +120,19 @@ CREATE TABLE faixa_interpretacao (
 );
 
 CREATE TABLE avaliacao (
-  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  usuario_id  INTEGER NOT NULL REFERENCES usuario (id) ON DELETE CASCADE,
-  versao_id   INTEGER NOT NULL REFERENCES questionario_versao (id) ON DELETE RESTRICT,
-  criado_em   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id           INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id   INTEGER NOT NULL REFERENCES usuario (id) ON DELETE CASCADE,
+  versao_id    INTEGER NOT NULL REFERENCES questionario_versao (id) ON DELETE RESTRICT,
+  revisao      INTEGER NOT NULL DEFAULT 1,
+  concluida_em TIMESTAMPTZ,
+  criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX avaliacao_usuario_id_idx ON avaliacao (usuario_id);
 CREATE INDEX avaliacao_versao_id_idx ON avaliacao (versao_id);
+CREATE UNIQUE INDEX avaliacao_rascunho_usuario_versao_idx
+  ON avaliacao (usuario_id, versao_id)
+  WHERE concluida_em IS NULL;
 
 CREATE TABLE resposta (
   id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -167,7 +172,7 @@ COMMENT ON TABLE questionario_versao IS 'Versão do questionário, não do aplic
 COMMENT ON TABLE pergunta IS 'Pergunta aberta não possui opcao_pergunta.';
 COMMENT ON TABLE opcao_pergunta IS 'Peso da pontuação automática em valor_numerico.';
 COMMENT ON TABLE faixa_interpretacao IS 'Critério da versão. Não é criado no envio do aluno.';
-COMMENT ON TABLE avaliacao IS 'Um envio do aluno. Não é diagnóstico.';
+COMMENT ON TABLE avaliacao IS 'Um envio do aluno. concluida_em nula é rascunho. Não é diagnóstico.';
 COMMENT ON TABLE resposta IS 'opcao_id para pergunta fechada; texto para aberta.';
 COMMENT ON TABLE resultado IS 'Score automático (soma + faixa). Não é diagnóstico.';
 COMMENT ON TABLE publicacao_questionario IS 'Quem publicou a versão e quando. Sem enunciado, resposta ou humor.';

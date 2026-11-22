@@ -67,12 +67,15 @@ oRotasQuestionario.use((_request, response, next) => { response.set('Cache-Contr
 oRotasQuestionario.use(autenticacaoMiddleware)
 oRotasQuestionario.get('/', avaliacaoController.catalogo)
 oRotasQuestionario.get('/:questionarioId', avaliacaoController.estrutura)
+oRotasQuestionario.post('/:questionarioId/rascunho', avaliacaoController.abrir)
 oRotasQuestionario.post('/:questionarioId/avaliacoes', avaliacaoController.enviar)
 
 const oRotasAvaliacao = Router()
 oRotasAvaliacao.use((_request, response, next) => { response.set('Cache-Control', 'no-store'); next() })
 oRotasAvaliacao.use(autenticacaoMiddleware)
 oRotasAvaliacao.get('/:avaliacaoId', avaliacaoController.consultar)
+oRotasAvaliacao.put('/:avaliacaoId', avaliacaoController.salvar)
+oRotasAvaliacao.post('/:avaliacaoId/concluir', avaliacaoController.concluir)
 
 oRotas.use('/questionarios', oRotasQuestionario)
 oRotas.use('/avaliacoes', oRotasAvaliacao)

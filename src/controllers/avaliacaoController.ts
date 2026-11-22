@@ -2,13 +2,21 @@ import type { NextFunction, Response } from 'express'
 import type { RequisicaoAutenticada } from '../middlewares/autenticacaoMiddleware.js'
 import { ErroAplicacao } from '../middlewares/errosMiddleware.js'
 import {
+  abrirRascunho,
+  concluirAvaliacao,
   consultarAvaliacao,
   detalharParaResponder,
   enviarAvaliacao,
   listarParaResponder,
+  salvarRascunho,
 } from '../services/avaliacaoService.js'
 import { entradaInvalidaResponder } from '../utils/erro.js'
-import { idAvaliacaoSchema, enviarAvaliacaoSchema } from '../validators/avaliacaoValidator.js'
+import {
+  concluirAvaliacaoSchema,
+  enviarAvaliacaoSchema,
+  idAvaliacaoSchema,
+  salvarRascunhoAvaliacaoSchema,
+} from '../validators/avaliacaoValidator.js'
 import { idsQuestionarioSchema } from '../validators/questionarioValidator.js'
 
 function exigirUsuario(request: RequisicaoAutenticada) {
@@ -58,6 +66,59 @@ export class AvaliacaoController {
       response.status(201).json({
         avaliacao: await enviarAvaliacao(usuario.id, params.data.questionarioId, entrada.data),
       })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  abrir = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const usuario = exigirUsuario(request)
+      const params = idsQuestionarioSchema.safeParse(request.params)
+      if (!params.success) {
+        entradaInvalidaResponder(response, params.error)
+        return
+      }
+      const resultado = await abrirRascunho(usuario.id, params.data.questionarioId)
+      response.status(resultado.criada ? 201 : 200).json({ avaliacao: resultado.avaliacao })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  salvar = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const usuario = exigirUsuario(request)
+      const params = idAvaliacaoSchema.safeParse(request.params)
+      if (!params.success) {
+        entradaInvalidaResponder(response, params.error)
+        return
+      }
+      const entrada = salvarRascunhoAvaliacaoSchema.safeParse(request.body)
+      if (!entrada.success) {
+        entradaInvalidaResponder(response, entrada.error)
+        return
+      }
+      response.json({ avaliacao: await salvarRascunho(usuario.id, params.data.avaliacaoId, entrada.data) })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  concluir = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const usuario = exigirUsuario(request)
+      const params = idAvaliacaoSchema.safeParse(request.params)
+      if (!params.success) {
+        entradaInvalidaResponder(response, params.error)
+        return
+      }
+      const entrada = concluirAvaliacaoSchema.safeParse(request.body)
+      if (!entrada.success) {
+        entradaInvalidaResponder(response, entrada.error)
+        return
+      }
+      response.json({ avaliacao: await concluirAvaliacao(usuario.id, params.data.avaliacaoId, entrada.data.revisao) })
     } catch (erro) {
       next(erro)
     }
