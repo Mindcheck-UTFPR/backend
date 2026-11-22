@@ -105,6 +105,7 @@ model questionario_versao {
   ativa                    Boolean               @default(false)
   periodo_reaplicacao_dias Int                   @db.SmallInt
   criado_em                DateTime              @default(now()) @db.Timestamptz(6)
+  publicada_em             DateTime?             @db.Timestamptz(6)
   avaliacao                avaliacao[]
   faixa_interpretacao      faixa_interpretacao[]
   pergunta                 pergunta[]

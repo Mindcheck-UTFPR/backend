@@ -79,6 +79,7 @@ CREATE TABLE questionario_versao (
   ativa                      BOOLEAN NOT NULL DEFAULT FALSE,
   periodo_reaplicacao_dias   SMALLINT NOT NULL,
   criado_em                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  publicada_em               TIMESTAMPTZ,
   CONSTRAINT questionario_versao_questionario_versao_unique UNIQUE (questionario_id, versao),
   CONSTRAINT questionario_versao_periodo_chk CHECK (periodo_reaplicacao_dias > 0)
 );
