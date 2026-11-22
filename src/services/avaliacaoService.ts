@@ -388,6 +388,18 @@ export async function listarHistorico(
   return { avaliacoes, temProxima: registros.length > limite }
 }
 
+export async function resultadoAtual(usuarioId: number, questionarioId: number) {
+  const { avaliacoes } = await listarHistorico(usuarioId, { questionarioId, limite: 1 })
+  const atual = avaliacoes[0]
+  if (!atual) {
+    throw new ErroAplicacao(404, 'RESULTADO_NAO_ENCONTRADO', 'Ainda não há resultado para este questionário.')
+  }
+  return {
+    ...atual,
+    aviso: 'Este resultado é orientativo e não é um diagnóstico.',
+  }
+}
+
 export async function consultarAvaliacao(usuarioId: number, avaliacaoId: number) {
   const registro = await prisma.avaliacao.findFirst({
     where: { id: avaliacaoId, usuario_id: usuarioId },

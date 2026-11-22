@@ -9,6 +9,7 @@ import {
   enviarAvaliacao,
   listarHistorico,
   listarParaResponder,
+  resultadoAtual,
   salvarRascunho,
 } from '../services/avaliacaoService.js'
 import { entradaInvalidaResponder } from '../utils/erro.js'
@@ -121,6 +122,20 @@ export class AvaliacaoController {
         return
       }
       response.json({ avaliacao: await concluirAvaliacao(usuario.id, params.data.avaliacaoId, entrada.data.revisao) })
+    } catch (erro) {
+      next(erro)
+    }
+  }
+
+  resultadoAtual = async (request: RequisicaoAutenticada, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const usuario = exigirUsuario(request)
+      const params = idsQuestionarioSchema.safeParse(request.params)
+      if (!params.success) {
+        entradaInvalidaResponder(response, params.error)
+        return
+      }
+      response.json({ resultado: await resultadoAtual(usuario.id, params.data.questionarioId) })
     } catch (erro) {
       next(erro)
     }
